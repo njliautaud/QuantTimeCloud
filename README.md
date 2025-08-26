@@ -87,6 +87,8 @@ DATABENTO_KEY=your_api_key_here
 - **Distributed Backtesting**: Run backtests on high-performance servers
 - **Job Queue Management**: Monitor and manage distributed jobs
 - **Resource Monitoring**: Real-time cluster resource utilization
+- **Node Deployment**: Automatic deployment and health monitoring
+- **Color-Coded Health Status**: Red (cannot connect), Yellow (issues), Green (operational)
 
 ## 🏗️ Architecture
 
@@ -231,6 +233,31 @@ data/es_futures/mbo/
 - **Progress Monitoring**: Real-time job status and progress
 - **Resource Management**: Cluster resource utilization
 - **Results Collection**: Automatic result synchronization
+
+## 🚀 Deployment
+
+### Dashboard Deployment
+1. **Run the dashboard**: `python run.py`
+2. **Follow the configuration wizard** for initial setup
+3. **Go to Settings → "🚀 Deploy"** for node management
+
+### Command-Line Deployment
+```bash
+# Full deployment (recommended)
+python scripts/deploy_nodes.py full
+
+# Individual commands
+python scripts/deploy_nodes.py git-check    # Check Git status
+python scripts/deploy_nodes.py deploy       # Deploy to all nodes
+python scripts/deploy_nodes.py health       # Check node health
+python scripts/deploy_nodes.py ray          # Start Ray clusters
+python scripts/deploy_nodes.py sync         # Sync large files
+```
+
+### Node Health Monitoring
+- **🟢 Green**: All systems operational
+- **🟡 Yellow**: Connected but issues (missing dependencies, version mismatch)
+- **🔴 Red**: Cannot connect to node
 
 ## 🧪 Testing
 

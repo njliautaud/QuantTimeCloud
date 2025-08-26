@@ -447,6 +447,36 @@ class SFTPManager:
                     "errors": task.errors
                 }
                 for task_id, task in self.sync_tasks.items()
+            }
+        }
+    
+    def sync_node_files(self, node_name: str) -> bool:
+        """Sync all large files to a specific node"""
+        try:
+            if node_name not in self.nodes:
+                return False
+            
+            # Scan for large files
+            large_files = self._scan_large_files()
+            if not large_files:
+                return True
+            
+            # Create sync task for this node
+            for file_path in large_files:
+                task = SyncTask(
+                    file_path=file_path,
+                    source_node="laptop",
+                    target_nodes=[node_name],
+                    priority="high"
+                )
+                self.sync_queue.put(task)
+            
+            # Execute sync
+            success = self._execute_sync_task(task)
+            return success
+            
+        except Exception as e:
+            return False
             },
             "discrepancies": self._detect_sync_discrepancies()
         }

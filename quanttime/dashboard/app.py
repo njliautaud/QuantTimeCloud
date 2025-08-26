@@ -72,6 +72,7 @@ from quanttime.dashboard.enhanced_backtest_interface import render_enhanced_back
 from quanttime.dashboard.syncthing_ray_interface import render_syncthing_ray_interface
 from quanttime.dashboard.sftp_interface import render_sftp_interface, render_sftp_ray_integration
 from quanttime.dashboard.config_wizard import show_config_wizard
+from quanttime.dashboard.node_deployment import render_node_deployment_interface
 from quanttime.utils.training_progress import create_progress_callback, create_training_progress
 import subprocess
 import json
@@ -4573,7 +4574,7 @@ def main():
             st.subheader("⚙️ Advanced Settings")
             
                         # Sub-tabs for advanced features
-            settings_tabs = st.tabs(["🧠 Hybrid Pipeline", "🔄 Pipeline", "📡 Live", "📊 Databento", "📋 Tasks", "🖥️ Servers", "🔧 Dev Tools", "⚙️ Config"])
+            settings_tabs = st.tabs(["🧠 Hybrid Pipeline", "🔄 Pipeline", "📡 Live", "📊 Databento", "📋 Tasks", "🖥️ Servers", "🚀 Deploy", "🔧 Dev Tools", "⚙️ Config"])
             
             with settings_tabs[0]:
                 render_hybrid_pipeline_interface()
@@ -4608,6 +4609,9 @@ def main():
                 render_sftp_interface()
 
             with settings_tabs[8]:
+                render_node_deployment_interface()
+
+            with settings_tabs[9]:
                 render_configuration_settings()
     
     else:
