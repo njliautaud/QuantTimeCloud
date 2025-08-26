@@ -71,6 +71,7 @@ from quanttime.dashboard.hybrid_pipeline_interface import render_hybrid_pipeline
 from quanttime.dashboard.enhanced_backtest_interface import render_enhanced_backtest_interface
 from quanttime.dashboard.syncthing_ray_interface import render_syncthing_ray_interface
 from quanttime.dashboard.sftp_interface import render_sftp_interface, render_sftp_ray_integration
+from quanttime.dashboard.config_wizard import show_config_wizard
 from quanttime.utils.training_progress import create_progress_callback, create_training_progress
 import subprocess
 import json
@@ -4517,6 +4518,10 @@ def execute_sync_plan(sync_plan, servers, sync_dirs):
 
 
 def main():
+    # Check if configuration is needed
+    if show_config_wizard():
+        return
+    
     st.markdown('<h1 class="main-header">QuantTime ML Trading Suite</h1>', unsafe_allow_html=True)
     
     # Enhanced Server Control Sidebar
@@ -4568,7 +4573,7 @@ def main():
             st.subheader("⚙️ Advanced Settings")
             
                         # Sub-tabs for advanced features
-            settings_tabs = st.tabs(["🧠 Hybrid Pipeline", "🔄 Pipeline", "📡 Live", "📊 Databento", "📋 Tasks", "🖥️ Servers", "🔧 Dev Tools"])
+            settings_tabs = st.tabs(["🧠 Hybrid Pipeline", "🔄 Pipeline", "📡 Live", "📊 Databento", "📋 Tasks", "🖥️ Servers", "🔧 Dev Tools", "⚙️ Config"])
             
             with settings_tabs[0]:
                 render_hybrid_pipeline_interface()
@@ -4603,7 +4608,7 @@ def main():
                 render_sftp_interface()
 
             with settings_tabs[8]:
-                dev_tools_tab()
+                render_configuration_settings()
     
     else:
         # Server dashboard - server-specific capabilities
@@ -4845,6 +4850,86 @@ def leaderboard_tab():
 def dev_tools_tab():
     """Development tools and troubleshooting tab"""
     dev_tools.render_dev_tools()
+
+def render_configuration_settings():
+    """Render configuration settings tab"""
+    st.subheader("⚙️ Configuration Settings")
+    
+    # Check current configuration
+    sftp_config_exists = Path("config/sftp_config.json").exists()
+    ray_config_exists = Path("config/ray_config.json").exists()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("SFTP Config", "✅ Configured" if sftp_config_exists else "❌ Missing")
+    with col2:
+        st.metric("Ray Config", "✅ Configured" if ray_config_exists else "❌ Missing")
+    
+    st.markdown("---")
+    
+    # Configuration management
+    st.subheader("🔧 Configuration Management")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔄 Reconfigure System"):
+            # Clear configuration files to trigger wizard
+            if sftp_config_exists:
+                Path("config/sftp_config.json").unlink()
+            if ray_config_exists:
+                Path("config/ray_config.json").unlink()
+            st.success("Configuration cleared. Please restart the dashboard.")
+            st.rerun()
+    
+    with col2:
+        if st.button("📋 View Current Config"):
+            if sftp_config_exists:
+                with open("config/sftp_config.json") as f:
+                    sftp_config = json.load(f)
+                st.json(sftp_config)
+            else:
+                st.warning("SFTP configuration not found")
+    
+    st.markdown("---")
+    
+    # Node management
+    st.subheader("🖥️ Node Management")
+    
+    if sftp_config_exists:
+        with open("config/sftp_config.json") as f:
+            config = json.load(f)
+        
+        nodes = config.get("nodes", {})
+        
+        for node_name, node_config in nodes.items():
+            with st.expander(f"Node: {node_name}"):
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.text_input("Host", value=node_config.get("host", ""), key=f"host_{node_name}")
+                with col2:
+                    st.text_input("Username", value=node_config.get("username", ""), key=f"user_{node_name}")
+                with col3:
+                    st.text_input("Port", value=str(node_config.get("port", 22)), key=f"port_{node_name}")
+                
+                if st.button(f"Test Connection - {node_name}"):
+                    # Test SSH connection
+                    import subprocess
+                    try:
+                        result = subprocess.run(
+                            f"ssh -o ConnectTimeout=5 {node_config['username']}@{node_config['host']} 'echo Connection successful'",
+                            shell=True,
+                            capture_output=True,
+                            text=True,
+                            timeout=10
+                        )
+                        if result.returncode == 0:
+                            st.success(f"✅ {node_name} connection successful")
+                        else:
+                            st.error(f"❌ {node_name} connection failed: {result.stderr}")
+                    except Exception as e:
+                        st.error(f"❌ {node_name} connection error: {str(e)}")
+    else:
+        st.warning("No configuration found. Please run the setup wizard.")
 
 
 # Server-specific tab functions

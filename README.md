@@ -26,22 +26,25 @@ A comprehensive quantitative trading platform built around **Databento MBO (Mark
 git clone <repository-url>
 cd QuantTime
 
-# Run the setup script
+# Start the dashboard (configuration wizard will appear automatically)
 python run.py
 ```
 
 ### Configuration
-1. Copy your Databento API key to `settings.txt`:
+1. **Follow the setup wizard** that appears when you first run `python run.py`:
+   - Configure Git repository for code synchronization
+   - Set up node connections (laptop, R630XL, R810)
+   - Configure Ray cluster settings
+   - Set up SFTP for large file synchronization
+
+2. Copy your Databento API key to `settings.txt`:
 ```
 DATABENTO_KEY=your_api_key_here
 ```
 
-2. Ensure your MBO data is in the `data/es_futures/mbo/` directory
+3. Ensure your MBO data is in the `data/es_futures/mbo/` directory
 
-3. Start the application:
-```bash
-python run.py
-```
+4. The dashboard will be available at `http://localhost:8501`
 
 ## 📊 Features
 
