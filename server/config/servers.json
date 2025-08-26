@@ -1,0 +1,80 @@
+{
+  "laptop": {
+    "name": "Laptop Control Center",
+    "type": "control",
+    "hostname": "laptop",
+    "ip_address": "laptop",
+    "tailscale_ip": "saturn",
+    "ssh_port": 22,
+    "username": "user",
+    "ssh_key_path": "~/.ssh/id_rsa",
+    "roles": ["control", "light_compute"],
+    "specs": {
+      "cpu_cores": 8,
+      "memory_gb": 16,
+      "disk_gb": 512,
+      "description": "Control center - can run any task"
+    },
+    "capabilities": ["ALL TASKS", "control", "data_normalization", "feature_engineering", "model_training", "backtesting"],
+    "status": "online",
+    "services": {
+      "dashboard": "quanttime-dashboard",
+      "data_collector": "quanttime-data-collector",
+      "api_server": "quanttime-api-server"
+    }
+  },
+  "r630xl": {
+    "name": "R630XL Server",
+    "type": "hybrid",
+    "hostname": "r630xl",
+    "ip_address": "jupiter",
+    "tailscale_ip": "jupiter",
+    "ssh_port": 22,
+    "username": "quanttime",
+    "ssh_key_path": "~/.ssh/id_rsa",
+    "roles": ["control", "compute", "data_processing"],
+    "specs": {
+      "cpu_cores": 16,
+      "memory_gb": 64,
+      "disk_gb": 2000,
+      "description": "Versatile server - handles any workload"
+    },
+    "capabilities": ["ALL TASKS", "data_normalization", "feature_engineering", "model_training", "backtesting"],
+    "status": "offline",
+    "services": {
+      "data_collector": "quanttime-data-collector",
+      "data_warehouse": "quanttime-data-warehouse",
+      "model_deployer": "quanttime-model-deployer",
+      "monitoring": "quanttime-monitoring",
+      "celery_worker": "quanttime-celery-worker",
+      "api_server": "quanttime-api-server"
+    }
+  },
+  "r810": {
+    "name": "R810 Heavy Compute",
+    "type": "compute",
+    "hostname": "r810",
+    "ip_address": "saturn",
+    "tailscale_ip": "saturn",
+    "ssh_port": 22,
+    "username": "quanttime",
+    "ssh_key_path": "~/.ssh/id_rsa",
+    "roles": ["heavy_compute", "model_training"],
+    "specs": {
+      "cpu_cores": 32,
+      "memory_gb": 256,
+      "disk_gb": 4000,
+      "description": "High-performance server - handles any workload"
+    },
+    "capabilities": ["ALL TASKS", "data_normalization", "feature_engineering", "model_training", "backtesting"],
+    "status": "offline",
+    "services": {
+      "data_collector": "quanttime-data-collector",
+      "data_warehouse": "quanttime-data-warehouse",
+      "model_deployer": "quanttime-model-deployer",
+      "monitoring": "quanttime-monitoring",
+      "celery_worker": "quanttime-celery-worker",
+      "api_server": "quanttime-api-server"
+    }
+  }
+}

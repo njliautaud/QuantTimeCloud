@@ -1,0 +1,142 @@
+# Server Deployment Configuration
+# Extends base configuration for 24/7 data warehousing and automated operations
+
+# Inherit base configuration
+extends: "../shared/config/base.yaml"
+
+# Server-specific settings
+server:
+  # 24/7 Data Collection
+  data_collection:
+    enabled: true
+    continuous: true  # Run 24/7
+    data_sources:
+      - "databento"
+      - "live_streams"
+      - "historical_data"
+    collection_interval: 60  # seconds
+    batch_size: 1000
+    max_workers: 16
+    retry_on_failure: true
+    max_retries: 5
+    
+  # Data Warehousing
+  data_warehouse:
+    storage_path: "data/server"
+    compression: "zstandard"
+    compression_level: 9  # Maximum compression
+    indexing_enabled: true
+    auto_cleanup: true
+    retention_policy:
+      raw_data: "30d"  # Keep raw data for 30 days
+      processed_data: "1y"  # Keep processed data for 1 year
+      aggregated_data: "5y"  # Keep aggregated data for 5 years
+      
+  # Automated Model Deployment
+  model_deployment:
+    enabled: true
+    auto_deploy: true
+    validation_required: true
+    rollback_on_failure: true
+    deployment_path: "models/server"
+    backup_models: true
+    max_model_versions: 10
+    
+  # Monitoring and Alerting
+  monitoring:
+    health_check_interval: 30  # seconds
+    alert_channels:
+      - "email"
+      - "dashboard"
+      - "logs"
+    alert_thresholds:
+      cpu_usage: 70
+      memory_usage: 80
+      disk_usage: 85
+      data_collection_lag: 300  # seconds
+    log_retention: "90d"
+    
+  # Backup and Recovery
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    backup_path: "backups"
+    compression: true
+    encryption: true
+    retention: "30d"
+    verify_backups: true
+    
+  # Security
+  security:
+    firewall_enabled: true
+    ssl_required: true
+    access_control:
+      allowed_ips: []  # Empty means laptop only
+      require_ssh_key: true
+    data_encryption: true
+    audit_logging: true
+    
+  # Performance
+  performance:
+    max_connections: 50
+    connection_timeout: 60
+    request_timeout: 300
+    enable_caching: true
+    cache_size: "2GB"
+    
+  # Services
+  services:
+    data_collector:
+      enabled: true
+      restart_on_failure: true
+      max_restarts: 5
+    data_warehouse:
+      enabled: true
+      auto_optimize: true
+    model_deployer:
+      enabled: true
+      auto_validate: true
+    monitoring:
+      enabled: true
+      metrics_collection: true
+      
+# Override base settings for server
+logging:
+  level: "WARNING"
+  file: "logs/server.log"
+  max_size: "500MB"
+  backup_count: 10
+  
+database:
+  type: "postgresql"  # Use PostgreSQL for server
+  host: "localhost"
+  port: 5432
+  username: "quanttime"
+  password: "${DB_PASSWORD}"
+  pool_size: 20
+  max_overflow: 50
+  
+monitoring:
+  enabled: true
+  metrics_interval: 60
+  alert_thresholds:
+    cpu_usage: 70
+    memory_usage: 80
+    disk_usage: 85
+    latency_ms: 50
+    
+security:
+  encryption_enabled: true
+  ssl_verify: true
+  session_timeout: 7200  # Longer sessions for server
+  
+network:
+  timeout: 60
+  retry_attempts: 5
+  max_connections: 50
+  keep_alive: true
+  
+development:
+  debug_mode: false
+  profiling_enabled: false
+  test_mode: false

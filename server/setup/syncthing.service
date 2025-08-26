@@ -1,0 +1,30 @@
+[Unit]
+Description=Syncthing - Continuous File Synchronization
+Documentation=man:syncthing(1)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=quanttime
+Group=quanttime
+ExecStart=/usr/bin/syncthing serve --no-browser --no-restart --logflags=0
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=3 4
+RestartForceExitStatus=3 4
+
+# Hardening
+ProtectSystem=strict
+ReadWritePaths=/opt/quanttime /home/quanttime/.config/syncthing
+PrivateTmp=true
+ProtectHome=true
+NoNewPrivileges=true
+PrivateDevices=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

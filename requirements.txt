@@ -1,0 +1,61 @@
+# QuantTime ML Trading Suite - Requirements
+# This file is kept for compatibility but Poetry (pyproject.toml) is the primary dependency manager
+# Use: poetry install --no-dev for production, poetry install for development
+
+# Core dependencies - exact versions for reproducibility
+streamlit==1.28.1
+pandas==2.1.3
+numpy==1.24.3
+plotly==5.17.0
+scikit-learn==1.3.2
+lightgbm==4.1.0
+xgboost==2.0.2
+torch==2.1.1
+transformers==4.35.2
+stable-baselines3==2.1.0
+gym==0.26.2
+optuna==3.4.0
+pyarrow==14.0.2
+sqlalchemy==2.0.23
+pydantic==2.5.0
+python-dotenv==1.0.0
+pyzmq==25.1.2
+pyyaml==6.0.1
+tabulate==0.9.0
+typer==0.9.0
+protobuf==4.25.1
+grpcio-tools==1.59.3
+zstandard==0.22.0
+databento==0.32.0
+pytz==2023.3
+
+# Server and networking
+paramiko==3.4.0
+requests==2.31.0
+fastapi==0.104.1
+uvicorn==0.24.0
+celery==5.3.4
+redis==5.0.1
+psycopg2-binary==2.9.9
+
+# SFTP and file transfer
+pysftp==0.2.9
+
+# Distributed computing - Updated to latest Ray version
+ray[tune,serve,data]==2.48.0
+psutil==5.9.6
+
+# File synchronization and system monitoring
+# syncthing==0.1.0  # System-level installation preferred
+
+# Development dependencies (optional)
+# pytest==7.4.3
+# pytest-cov==4.1.0
+# black==23.11.0
+# isort==5.12.0
+# flake8==6.1.0
+# mypy==1.7.1
+# pre-commit==3.6.0
+# jupyter==1.0.0
+# ipykernel==6.26.0
+

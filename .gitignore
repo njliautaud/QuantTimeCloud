@@ -1,0 +1,96 @@
+# QuantTime Large File Exclusions (Managed by SFTP)
+# These files are too large for Git and are synced via SFTP
+
+# Large data files
+data/es_futures/
+data/backup/
+data/processed/
+data/raw/
+data/live/
+data/live_streams/
+
+# Model files
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.pt
+models/*.pth
+models/*.onnx
+models/*.pb
+models/trained/
+models/checkpoints/
+
+# Backtest results
+backtest/results/
+backtest/output/
+backtest/performance/
+
+# Log files
+logs/
+*.log
+*.log.*
+
+# Cache and temporary files
+cache/
+temp/
+tmp/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Large binary files
+*.bin
+*.dat
+*.dbn
+*.dbn.zst
+
+# Configuration files with sensitive data
+config/credentials/
+config/secrets/
+*.key
+*.pem
+*.crt
+
+# Ray temporary files
+ray_results/
+ray_tmp/
+
+# Syncthing files (if any remain)
+.stfolder/
+.syncthing/

@@ -1,0 +1,33 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sierra
+      POSTGRES_PASSWORD: REDACTED_POSTGRES_PASSWORD
+      POSTGRES_DB: sierraflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+psycopg2://sierra:REDACTED_POSTGRES_PASSWORD@db:5432/sierraflow
+      ZMQ_PUB_ENDPOINT: tcp://0.0.0.0:5555
+      ZMQ_SUB_ENDPOINT: tcp://app:5555
+      DATA_DIR: /app/data
+      STREAMLIT_PORT: 8501
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./:/app
+
+volumes:
+  pgdata:
+
+

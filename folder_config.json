@@ -1,0 +1,40 @@
+{
+  "id": "quanttime-project",
+  "label": "QuantTime Project",
+  "path": "/opt/quanttime",
+  "type": "sendreceive",
+  "rescanIntervalS": 3600,
+  "fsWatcherEnabled": true,
+  "fsWatcherDelayS": 10,
+  "ignorePerms": false,
+  "autoNormalize": true,
+  "minDiskFree": {
+    "unit": "%",
+    "value": 1
+  },
+  "versioning": {
+    "type": "simple",
+    "params": {
+      "keep": "10"
+    }
+  },
+  "devices": [
+    {
+      "deviceID": "REDACTED_SYNCTHING_DEVICE_ID",
+      "introducedBy": "",
+      "encryptionPassword": "",
+      "skipIntroductionRemovals": false,
+      "introducer": false,
+      "compression": "metadata",
+      "certName": "",
+      "paused": false,
+      "allowedNetworks": [],
+      "autoAcceptFolders": false,
+      "maxSendKbps": 0,
+      "maxRecvKbps": 0,
+      "ignoredFolders": [],
+      "pendingFolders": [],
+      "maxRequestKiB": 0
+    }
+  ]
+}

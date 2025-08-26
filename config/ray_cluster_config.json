@@ -1,0 +1,51 @@
+{
+  "head_node": {
+    "node_id": "laptop",
+    "name": "Development Laptop",
+    "address": "localhost",
+    "port": 10001,
+    "dashboard_port": 8265,
+    "is_head": true,
+    "resources": {
+      "CPU": 8,
+      "GPU": 0,
+      "memory": 16.0
+    }
+  },
+  "worker_nodes": [
+    {
+      "node_id": "r630xl",
+      "name": "R630XL Server (Jupiter)",
+      "address": "jupiter",
+      "port": 6379,
+      "dashboard_port": 8265,
+      "is_head": false,
+      "resources": {
+        "CPU": 16,
+        "GPU": 0,
+        "memory": 64.0
+      }
+    },
+    {
+      "node_id": "r810",
+      "name": "R810 Server",
+      "address": "saturn",
+      "port": 6379,
+      "dashboard_port": 8265,
+      "is_head": false,
+      "resources": {
+        "CPU": 32,
+        "GPU": 4,
+        "memory": 256.0
+      }
+    }
+  ],
+  "cluster_settings": {
+    "auto_scaling": true,
+    "min_workers": 1,
+    "max_workers": 10,
+    "idle_timeout_minutes": 5,
+    "object_store_memory": "2GB",
+    "redis_max_memory": "1GB"
+  }
+}

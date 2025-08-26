@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-08-14T19:23:03.217050",
+  "statistics": {
+    "es_mbo": 27,
+    "es_other": 0,
+    "test_data": 18,
+    "api_files": 0,
+    "dataset_files": 0,
+    "unknown": 683,
+    "errors": 0
+  },
+  "directory_structure": {
+    "es_data": "data_organized\\es_futures",
+    "other_data": "data_organized\\other_data",
+    "test_data": "data_organized\\test_data",
+    "archive": "data_organized\\archive"
+  },
+  "next_steps": [
+    "Update your configuration files to point to 'data_organized/es_futures'",
+    "Remove the old 'data' directory if everything looks good",
+    "Update any hardcoded paths in your code"
+  ]
+}

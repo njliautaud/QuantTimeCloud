@@ -1,0 +1,184 @@
+[tool.poetry]
+name = "quanttime"
+version = "0.1.0"
+description = "QuantTime ML Trading Suite - Multi-node distributed computing platform for quantitative trading"
+authors = ["QuantTime Team"]
+readme = "README.md"
+packages = [
+    {include = "quanttime"},
+    {include = "server"}
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+streamlit = "1.28.1"
+pandas = "2.1.3"
+numpy = "1.24.3"
+plotly = "5.17.0"
+scikit-learn = "1.3.2"
+lightgbm = "4.1.0"
+xgboost = "2.0.2"
+torch = "2.1.1"
+transformers = "4.35.2"
+stable-baselines3 = "2.1.0"
+gym = "0.26.2"
+optuna = "3.4.0"
+pyarrow = "14.0.2"
+sqlalchemy = "2.0.23"
+pydantic = "2.5.0"
+python-dotenv = "1.0.0"
+pyzmq = "25.1.2"
+pyyaml = "6.0.1"
+tabulate = "0.9.0"
+typer = "0.9.0"
+protobuf = "4.25.1"
+grpcio-tools = "1.59.3"
+zstandard = "0.22.0"
+databento = "0.32.0"
+pytz = "2023.3"
+paramiko = "3.4.0"
+requests = "2.31.0"
+fastapi = "0.104.1"
+uvicorn = "0.24.0"
+celery = "5.3.4"
+redis = "5.0.1"
+psycopg2-binary = "2.9.9"
+ray = {version = "2.8.0", extras = ["tune"]}
+syncthing = "0.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "7.4.3"
+pytest-cov = "4.1.0"
+black = "23.11.0"
+isort = "5.12.0"
+flake8 = "6.1.0"
+mypy = "1.7.1"
+pre-commit = "3.6.0"
+jupyter = "1.0.0"
+ipykernel = "6.26.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = "7.4.3"
+pytest-cov = "4.1.0"
+pytest-mock = "3.12.0"
+pytest-asyncio = "0.21.1"
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "7.2.6"
+sphinx-rtd-theme = "1.3.0"
+myst-parser = "2.0.0"
+
+[tool.poetry.scripts]
+quanttime = "quanttime.cli:main"
+quanttime-dashboard = "quanttime.dashboard.app:main"
+quanttime-server = "server.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.urls]
+"Homepage" = "https://github.com/quanttime/quanttime"
+"Repository" = "https://github.com/quanttime/quanttime"
+"Documentation" = "https://quanttime.readthedocs.io"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["quanttime", "server"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "streamlit.*",
+    "plotly.*",
+    "torch.*",
+    "transformers.*",
+    "stable_baselines3.*",
+    "gym.*",
+    "optuna.*",
+    "databento.*",
+    "ray.*",
+    "syncthing.*"
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=quanttime",
+    "--cov=server",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests"
+]
+
+[tool.coverage.run]
+source = ["quanttime", "server"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+    "*/venv/*",
+    "*/.venv/*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod"
+]
+
+

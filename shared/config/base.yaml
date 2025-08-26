@@ -1,0 +1,112 @@
+# QuantTime Base Configuration
+# Shared across all deployments (laptop, desktop, server)
+
+# Database Configuration
+database:
+  type: "sqlite"  # Can be sqlite, postgresql, mysql
+  path: "quanttime.db"
+  host: "localhost"
+  port: 5432
+  username: ""
+  password: ""
+  pool_size: 10
+  max_overflow: 20
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+  file: "logs/quanttime.log"
+  max_size: "100MB"
+  backup_count: 5
+  console: true
+
+# API Keys and Credentials
+api_keys:
+  databento:
+    key: "${DATABENTO_API_KEY}"
+    environment: "production"  # production, staging, development
+  # Add other API keys as needed
+
+# Data Storage Configuration
+data:
+  root_dir: "data"
+  formats: ["parquet", "csv", "json"]
+  compression: "snappy"
+  backup_enabled: true
+  backup_interval: "24h"
+  retention_days: 365
+
+# Model Configuration
+models:
+  registry_path: "models"
+  default_framework: "lightgbm"
+  hyperparameter_tuning: true
+  cross_validation_folds: 5
+  early_stopping_rounds: 100
+  save_best_only: true
+
+# Trading Configuration
+trading:
+  default_strategy: "mean_reversion"
+  risk_management:
+    max_position_size: 0.1
+    stop_loss: 0.02
+    take_profit: 0.04
+  execution:
+    slippage_tolerance: 0.001
+    max_retries: 3
+    retry_delay: 1.0
+
+# Performance Monitoring
+monitoring:
+  enabled: true
+  metrics_interval: 60  # seconds
+  alert_thresholds:
+    cpu_usage: 80
+    memory_usage: 85
+    disk_usage: 90
+    latency_ms: 100
+
+# Security Configuration
+security:
+  encryption_enabled: true
+  ssl_verify: true
+  session_timeout: 3600  # seconds
+  max_login_attempts: 5
+  password_min_length: 8
+
+# Network Configuration
+network:
+  timeout: 30  # seconds
+  retry_attempts: 3
+  retry_delay: 1.0
+  max_connections: 100
+  keep_alive: true
+
+# Development Configuration
+development:
+  debug_mode: false
+  hot_reload: false
+  profiling_enabled: false
+  test_mode: false
+
+# Environment-specific overrides
+environments:
+  development:
+    logging:
+      level: "DEBUG"
+    database:
+      type: "sqlite"
+    monitoring:
+      enabled: false
+  
+  production:
+    logging:
+      level: "WARNING"
+    database:
+      type: "postgresql"
+    monitoring:
+      enabled: true
+    security:
+      encryption_enabled: true

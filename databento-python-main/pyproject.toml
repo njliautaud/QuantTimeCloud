@@ -1,0 +1,80 @@
+[tool.poetry]
+name = "databento"
+version = "0.61.0"
+description = "Official Python client library for Databento"
+authors = [
+    "Databento <support@databento.com>",
+]
+license = "Apache License 2.0"
+packages = [
+    {include = "databento"},
+    {include = "databento/py.typed"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+readme = "README.md"
+documentation = "https://databento.com/docs"
+homepage = "https://databento.com"
+repository = "https://github.com/databento/databento-python"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/databento/databento-python/issues"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+aiohttp = [
+    {version = "^3.8.3", python = "<3.12"},
+    {version = "^3.9.0", python = "^3.12"}
+]
+databento-dbn = "~=0.39.0"
+numpy = [
+    {version = ">=1.23.5", python = "<3.12"},
+    {version = ">=1.26.0", python = "^3.12"}
+]
+pandas = ">=1.5.3"
+pip-system-certs = {version=">=4.0", markers="platform_system == 'Windows'"}
+pyarrow = ">=13.0.0"
+requests = ">=2.27.0"
+zstandard = ">=0.21.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.9.1"
+mypy = "1.5.1"
+pytest = "^7.4.2"
+pytest-asyncio = "==0.21.1"
+ruff = "^0.0.291"
+types-requests = "^2.30.0.0"
+tomli = "^2.0.1"
+teamcity-messages = "^1.32"
+types-pytz = "^2024.1.0.20240203"
+types-aiofiles = "^23.2.0.20240403"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line_length = 100
+
+[tool.mypy]
+python_version = 3.9
+disallow_untyped_defs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+ignore_missing_imports = true
+namespace_packages = true
+no_strict_optional = true
+warn_no_return = true
+warn_unused_configs = true
+warn_unused_ignores = true
+plugins = ["numpy.typing.mypy_plugin"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
