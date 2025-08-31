@@ -1,0 +1,45 @@
+{
+  "node": {
+    "name": "laptop",
+    "platform": "windows",
+    "arch": "AMD64",
+    "python_version": "3.11",
+    "hostname": "razer",
+    "user": "user"
+  },
+  "paths": {
+    "project_root": "C:\\Users\\user\\Documents\\GitHub\\QuantTime",
+    "data": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\data",
+    "logs": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\logs",
+    "cache": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\cache",
+    "temp": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\temp",
+    "venv": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\.venv",
+    "config": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\config",
+    "scripts": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\scripts"
+  },
+  "ray": {
+    "temp_dir": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\temp\\ray",
+    "log_dir": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\logs\\ray",
+    "dashboard_port": 8265,
+    "head_port": 10001,
+    "object_store_memory": "2000000000",
+    "num_cpus": 16,
+    "memory": "8000000000"
+  },
+  "environment": {
+    "isolated": true,
+    "auto_setup": true,
+    "sync_exclusions": [
+      ".env",
+      ".env.local",
+      "config/local_*",
+      "logs/*",
+      "cache/*",
+      "temp/*",
+      ".venv/*",
+      "__pycache__/*",
+      "*.pyc",
+      "node_*.json"
+    ]
+  }
+}

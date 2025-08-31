@@ -1,0 +1,33 @@
+{
+  "head_node": {
+    "host": "razer",
+    "port": 10001,
+    "dashboard_port": 8265,
+    "node_type": "head"
+  },
+  "worker_nodes": [
+    {
+      "name": "r630xl",
+      "host": "jupiter",
+      "port": 10001,
+      "node_type": "worker"
+    }
+  ],
+  "cluster_settings": {
+    "auto_detect_resources": true,
+    "max_concurrent_jobs": 4,
+    "job_timeout_minutes": 60,
+    "object_store_memory": "2GB",
+    "redis_max_memory": "1GB"
+  },
+  "estimated_resources": {
+    "cpu_per_node": 8,
+    "gpu_per_node": 0,
+    "memory_gb_per_node": 16
+  },
+  "connection_info": {
+    "use_tailscale": true,
+    "connection_timeout": 30,
+    "retry_attempts": 3
+  }
+}

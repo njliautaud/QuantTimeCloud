@@ -29,6 +29,7 @@ import paramiko
 
 # Enhanced logging
 from quanttime.utils.logging_config import log_device_operation, log_server_operation
+from quanttime.dashboard.node_status_manager import node_status_manager
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -114,6 +115,9 @@ class EnhancedServerControl:
     
     def render_enhanced_sidebar(self):
         """Render the enhanced server control sidebar with slide tab device selection"""
+        # Sync node status from initial config before rendering
+        self.sync_node_status_from_initial_config()
+        
         with st.sidebar:
             # Simple header
             st.markdown("## 🖥️ Server Control")
@@ -199,13 +203,17 @@ class EnhancedServerControl:
     
     def _render_simple_quick_actions(self):
         """Render simplified quick actions"""
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             if st.button("🔍 Check All", key="check_all", use_container_width=True):
                 self._check_all_servers()
         
         with col2:
+            if st.button("🔄 Sync Check", key="sync_check", use_container_width=True):
+                self._check_sync_status()
+        
+        with col3:
             if st.button("🔄 Sync All", key="sync_all", use_container_width=True):
                 self._sync_all_servers()
         
@@ -291,21 +299,88 @@ class EnhancedServerControl:
             # This would be populated from actual job queue data
             st.caption("Job details would appear here")
     
+    def sync_node_status_from_initial_config(self):
+        """Sync node status from persistent storage with sidebar"""
+        # Get persistent node status
+        node_status = node_status_manager.get_all_node_status()
+        logger.info(f"🔄 Syncing node status from persistent storage: {node_status}")
+        
+        for node_id, status in node_status.items():
+            # Map node_id to device name
+            device_mapping = {
+                "laptop": "laptop",
+                "r630xl": "r630xl", 
+                "r810": "r810"
+            }
+            
+            if node_id in device_mapping:
+                device = device_mapping[node_id]
+                if device in self.server_status:
+                    # Update server status based on persistent storage
+                    self.server_status[device]["connected"] = status.get("connected", False)
+                    self.server_status[device]["last_check"] = datetime.now().strftime("%H:%M:%S")
+                    
+                    # Update health info if available
+                    health_info = status.get("health_info", {})
+                    if health_info:
+                        self.server_status[device]["cpu_cores"] = health_info.get("cpu_cores", "Unknown")
+                        self.server_status[device]["memory"] = health_info.get("memory", "Unknown")
+                        self.server_status[device]["system"] = health_info.get("system", "Unknown")
+                        self.server_status[device]["quanttime_installed"] = health_info.get("quanttime_installed", False)
+                        self.server_status[device]["ray_running"] = health_info.get("ray_running", False)
+                    
+                    logger.info(f"   ✅ Updated {device} status: connected={status.get('connected', False)}")
+        
+        # Also update session state for compatibility
+        st.session_state.node_status = node_status
+    
     def _check_all_servers(self):
         """Check connection status for all servers"""
-        with st.spinner("Checking server connections..."):
-            for device in self.servers.keys():
-                if device == "laptop":
-                    # Laptop is online if we're running on it, otherwise check connection
-                    if self._is_running_on_laptop:
-                        self.server_status[device]["connected"] = True
-                        self.server_status[device]["last_check"] = datetime.now().strftime("%H:%M:%S")
-                        self.server_status[device]["error"] = None
-                    else:
-                        self._check_server_connection(device)
-                else:
-                    self._check_server_connection(device)
-            st.success("Server check completed!")
+        try:
+            # First sync with initial config status
+            self.sync_node_status_from_initial_config()
+            
+            with st.spinner("Checking server connections..."):
+                # Use existing connections from session state instead of creating new ones
+                if "node_status" in st.session_state:
+                    node_status = st.session_state.node_status
+                    
+                    for device in self.servers.keys():
+                        if device == "laptop":
+                            # Laptop is online if we're running on it
+                            if self._is_running_on_laptop:
+                                self.server_status[device]["connected"] = True
+                                self.server_status[device]["last_check"] = datetime.now().strftime("%H:%M:%S")
+                                self.server_status[device]["error"] = None
+                            else:
+                                # Check if laptop is connected in session state
+                                laptop_status = node_status.get("laptop", {})
+                                self.server_status[device]["connected"] = laptop_status.get("connected", False)
+                                self.server_status[device]["last_check"] = datetime.now().strftime("%H:%M:%S")
+                                self.server_status[device]["error"] = laptop_status.get("error", None)
+                        else:
+                            # Check if remote server is connected in session state
+                            device_status = node_status.get(device, {})
+                            self.server_status[device]["connected"] = device_status.get("connected", False)
+                            self.server_status[device]["last_check"] = datetime.now().strftime("%H:%M:%S")
+                            self.server_status[device]["error"] = device_status.get("error", None)
+                            
+                            # If connected, try to get system info using existing connection
+                            if device_status.get("connected", False):
+                                try:
+                                    from quanttime.core.sftp_manager import sftp_manager
+                                    ssh_client = sftp_manager._get_ssh_connection(device)
+                                    if ssh_client:
+                                        self._update_server_status(device, ssh_client)
+                                        ssh_client.close()
+                                except Exception as e:
+                                    logger.warning(f"Could not update status for {device}: {e}")
+                
+                st.success("Server check completed!")
+                
+        except Exception as e:
+            logger.error(f"Error in _check_all_servers: {e}")
+            st.error(f"❌ Error checking servers: {str(e)}")
     
     def _sync_all_servers(self):
         """Sync data from all servers"""
@@ -476,6 +551,270 @@ class EnhancedServerControl:
         except Exception as e:
             logger.error(f"Error submitting remote job: {e}")
             return False
+    
+    def _check_sync_status(self):
+        """Check sync status between nodes and identify discrepancies"""
+        try:
+            st.info("🔄 Checking sync status between nodes...")
+            
+            # Get connected nodes from persistent storage
+            connected_nodes = node_status_manager.get_connected_nodes()
+            
+            if not connected_nodes:
+                st.warning("⚠️ No nodes are currently connected.")
+                return
+            
+            # Import sync manager
+            try:
+                from quanttime.core.git_sync_manager import git_sync_manager
+                from quanttime.dashboard.initial_config import InitialConfigManager
+            except ImportError:
+                st.error("❌ Sync managers not available")
+                return
+            
+            # Initialize config manager for SSH connections
+            config_manager = InitialConfigManager()
+            
+            # Check each connected node
+            sync_results = {}
+            
+            for node_id in connected_nodes:
+                with st.spinner(f"🔍 Checking sync status for {node_id}..."):
+                    try:
+                        # Get node info and credentials from persistent storage
+                        node_info = config_manager.nodes.get(node_id, {})
+                        node_status_info = node_status_manager.get_node_status(node_id)
+                        
+                        if not node_status_info.get("connected", False):
+                            sync_results[node_id] = [{"type": "error", "message": "Node not connected"}]
+                            continue
+                        
+                        # Get credentials from session state
+                        username = node_status_info.get("username", "")
+                        if not username:
+                            sync_results[node_id] = [{"type": "error", "message": "No username available"}]
+                            continue
+                        
+                        # Extract password from session state (if available)
+                        password = None
+                        if "ssh_credentials" in st.session_state:
+                            password = st.session_state.ssh_credentials.get(node_id, {}).get("password")
+                        
+                        if not password:
+                            sync_results[node_id] = [{"type": "error", "message": "No password available - please reconnect"}]
+                            continue
+                        
+                        # Parse username@host format
+                        if "@" in username:
+                            username_part, host_part = username.split("@", 1)
+                        else:
+                            username_part = username
+                            host_part = node_info.get("host", "")
+                        
+                        # Create SSH connection using the same method as initial config
+                        ssh_client = config_manager._create_ssh_connection(host_part, username_part, password)
+                        if ssh_client:
+                            try:
+                                # Check Git status
+                                success, discrepancies = git_sync_manager.detect_sync_discrepancies(node_id, ssh_client)
+                                
+                                if success:
+                                    sync_results[node_id] = discrepancies
+                                else:
+                                    sync_results[node_id] = [{"type": "error", "message": "Failed to detect discrepancies"}]
+                            finally:
+                                ssh_client.close()
+                        else:
+                            sync_results[node_id] = [{"type": "error", "message": "Failed to establish SSH connection"}]
+                    except Exception as e:
+                        logger.error(f"Error checking sync for {node_id}: {e}")
+                        sync_results[node_id] = [{"type": "error", "message": f"Error: {str(e)}"}]
+            
+            # Display results
+            st.markdown("### 📊 Sync Status Results")
+            
+            total_discrepancies = 0
+            for node_id, discrepancies in sync_results.items():
+                if discrepancies:
+                    with st.expander(f"🔍 {node_id.upper()} Discrepancies ({len(discrepancies)} found)", expanded=True):
+                        for i, discrepancy in enumerate(discrepancies):
+                            self._render_discrepancy_item(discrepancy, i, node_id)
+                        total_discrepancies += len(discrepancies)
+                else:
+                    st.success(f"✅ {node_id.upper()}: No discrepancies found")
+            
+            if total_discrepancies > 0:
+                st.warning(f"⚠️ Found {total_discrepancies} discrepancies across {len(connected_nodes)} nodes")
+                st.info("💡 Use 'Sync All' to fix these discrepancies")
+            else:
+                st.success("🎉 All nodes are in sync!")
+            
+            # Store results in session state for later use
+            st.session_state.sync_check_results = sync_results
+            
+        except Exception as e:
+            logger.error(f"Error checking sync status: {e}")
+            st.error(f"❌ Error checking sync status: {str(e)}")
+    
+    def _render_discrepancy_item(self, discrepancy: Dict, index: int, node_id: str):
+        """Render a single discrepancy item"""
+        discrepancy_type = discrepancy.get("type", "unknown")
+        severity = discrepancy.get("severity", "medium")
+        
+        # Color coding based on severity
+        if severity == "high":
+            st.error(f"🔴 **{discrepancy_type.replace('_', ' ').title()}**")
+        elif severity == "medium":
+            st.warning(f"🟡 **{discrepancy_type.replace('_', ' ').title()}**")
+        else:
+            st.info(f"🔵 **{discrepancy_type.replace('_', ' ').title()}**")
+        
+        # Display discrepancy details
+        if discrepancy_type == "commit_mismatch":
+            st.markdown(f"- **Laptop Commit:** `{discrepancy.get('laptop_commit', 'Unknown')}`")
+            st.markdown(f"- **Node Commit:** `{discrepancy.get('node_commit', 'Unknown')}`")
+        
+        elif discrepancy_type == "local_changes":
+            changes = discrepancy.get("changes", [])
+            st.markdown(f"- **Local Changes:** {len(changes)} files modified")
+            for change in changes[:3]:  # Show first 3 changes
+                st.code(change)
+            if len(changes) > 3:
+                st.markdown(f"- *... and {len(changes) - 3} more changes*")
+        
+        elif discrepancy_type == "large_files_not_synced":
+            files = discrepancy.get("files", [])
+            st.markdown(f"- **Large Files:** {len(files)} files need syncing")
+            for file_info in files[:3]:  # Show first 3 files
+                st.markdown(f"  - `{file_info.get('path', 'Unknown')}` ({file_info.get('size', 'Unknown')})")
+            if len(files) > 3:
+                st.markdown(f"- *... and {len(files) - 3} more files*")
+        
+        elif discrepancy_type == "missing_directories":
+            directories = discrepancy.get("directories", [])
+            st.markdown(f"- **Missing Directories:** {len(directories)} directories")
+            for directory in directories[:3]:  # Show first 3 directories
+                st.markdown(f"  - `{directory}`")
+            if len(directories) > 3:
+                st.markdown(f"- *... and {len(directories) - 3} more directories*")
+        
+        elif discrepancy_type == "error":
+            st.error(f"❌ **Error:** {discrepancy.get('message', 'Unknown error')}")
+    
+    def _sync_all_servers(self):
+        """Sync all connected servers"""
+        try:
+            st.info("🔄 Starting sync for all connected servers...")
+            
+            # Get connected nodes from persistent storage
+            connected_nodes = node_status_manager.get_connected_nodes()
+            
+            if not connected_nodes:
+                st.warning("⚠️ No nodes are currently connected.")
+                return
+            
+            # Import sync manager
+            try:
+                from quanttime.core.git_sync_manager import git_sync_manager
+                from quanttime.dashboard.initial_config import InitialConfigManager
+            except ImportError:
+                st.error("❌ Sync managers not available")
+                return
+            
+            # Initialize config manager for SSH connections
+            config_manager = InitialConfigManager()
+            
+            # Sync each connected node
+            results = {}
+            
+            for node_id in connected_nodes:
+                with st.spinner(f"🔄 Syncing {node_id}..."):
+                    try:
+                        # Get node info and credentials from persistent storage
+                        node_info = config_manager.nodes.get(node_id, {})
+                        node_status_info = node_status_manager.get_node_status(node_id)
+                        
+                        if not node_status_info.get("connected", False):
+                            results[node_id] = {
+                                "success": False,
+                                "message": "Node not connected",
+                                "result": {}
+                            }
+                            continue
+                        
+                        # Get credentials from session state
+                        username = node_status_info.get("username", "")
+                        if not username:
+                            results[node_id] = {
+                                "success": False,
+                                "message": "No username available",
+                                "result": {}
+                            }
+                            continue
+                        
+                        # Extract password from session state (if available)
+                        password = None
+                        if "ssh_credentials" in st.session_state:
+                            password = st.session_state.ssh_credentials.get(node_id, {}).get("password")
+                        
+                        if not password:
+                            results[node_id] = {
+                                "success": False,
+                                "message": "No password available - please reconnect",
+                                "result": {}
+                            }
+                            continue
+                        
+                        # Parse username@host format
+                        if "@" in username:
+                            username_part, host_part = username.split("@", 1)
+                        else:
+                            username_part = username
+                            host_part = node_info.get("host", "")
+                        
+                        # Create SSH connection using the same method as initial config
+                        ssh_client = config_manager._create_ssh_connection(host_part, username_part, password)
+                        if ssh_client:
+                            try:
+                                # Perform full sync
+                                success, message, sync_result = git_sync_manager.perform_full_sync(node_id, ssh_client)
+                                
+                                results[node_id] = {
+                                    "success": success,
+                                    "message": message,
+                                    "result": sync_result
+                                }
+                            finally:
+                                ssh_client.close()
+                        else:
+                            results[node_id] = {
+                                "success": False,
+                                "message": "Failed to establish SSH connection",
+                                "result": {}
+                            }
+                    except Exception as e:
+                        logger.error(f"Error syncing {node_id}: {e}")
+                        results[node_id] = {
+                            "success": False,
+                            "message": f"Error: {str(e)}",
+                            "result": {}
+                        }
+            
+            # Display results
+            st.markdown("### 📊 Sync Results")
+            for node_id, result in results.items():
+                if result["success"]:
+                    st.success(f"✅ {node_id}: {result['message']}")
+                    if result["result"].get("files_synced", 0) > 0:
+                        st.info(f"   📁 Synced {result['result']['files_synced']} files")
+                    if result["result"].get("directories_synced", 0) > 0:
+                        st.info(f"   📁 Synced {result['result']['directories_synced']} directories")
+                else:
+                    st.error(f"❌ {node_id}: {result['message']}")
+            
+        except Exception as e:
+            logger.error(f"Error syncing all servers: {e}")
+            st.error(f"❌ Error syncing servers: {str(e)}")
 
 # Global instance
 enhanced_server_control = EnhancedServerControl()

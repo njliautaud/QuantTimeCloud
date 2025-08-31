@@ -1,0 +1,22 @@
+{
+  "r630xl": {
+    "connected": true,
+    "username": "jupiter@jupiter",
+    "quanttime_running": true,
+    "status": "\ud83d\udfe2 Connected & Running",
+    "last_updated": "2025-08-28T22:32:29.253896"
+  },
+  "laptop": {
+    "connected": true,
+    "username": "local",
+    "status": "\ud83d\udfe2 Auto-Detected",
+    "health_info": {
+      "system": "Windows 10.0.26100",
+      "cpu_cores": "16",
+      "memory": "15.4 GB",
+      "quanttime_installed": true,
+      "ray_running": true
+    },
+    "last_updated": "2025-08-31T02:19:26.420238"
+  }
+}

@@ -356,9 +356,9 @@ def render_pipeline_training():
             st.info("📊 Loading data...")
             # raw_data = load_mbo_data(start_date, end_date, symbols)
             
-            # For demonstration, create sample data
-            st.info("📊 Creating sample data for demonstration...")
-            sample_data = create_sample_training_data()
+            # Use real data instead of sample data
+            st.warning("⚠️ Please load real data from Databento or upload CSV files.")
+            return
             
             # Prepare data
             st.info("🔧 Preparing data...")
@@ -780,9 +780,12 @@ def execute_enhanced_backtest(start_date, end_date, symbols, initial_capital,
         # Get trained pipeline
         pipeline = st.session_state.trained_pipeline
         
-        # Generate sample MBO data for demonstration
-        # In production, this would load actual Databento MBO data
-        sample_data = create_sample_mbo_data(10000)
+        # Check if real data is available
+        if 'real_mbo_data' not in st.session_state:
+            st.error("❌ No real MBO data available. Please load data from Databento or upload CSV files first.")
+            return
+        
+        sample_data = st.session_state.real_mbo_data
         
         # Generate predictions using the pipeline
         predictions = pipeline.generate_predictions(sample_data)

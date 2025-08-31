@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # QuantTime nodes via Tailscale IPs
+  - job_name: 'quanttime-nodes'
+    static_configs:
+      - targets: 
+        - 'jupiter:8501'  # R630XL
+        - 'saturn:8501'  # R810
+        - 'localhost:8501'      # Laptop
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Ray cluster monitoring
+  - job_name: 'ray-cluster'
+    static_configs:
+      - targets: 
+        - 'jupiter:10001'  # R630XL Ray
+        - 'saturn:10001'  # R810 Ray
+        - 'localhost:10001'      # Laptop Ray
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # System metrics (if node-exporter is installed)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: 
+        - 'jupiter:9100'  # R630XL
+        - 'saturn:9100'  # R810
+        - 'localhost:9100'      # Laptop
+    scrape_interval: 15s

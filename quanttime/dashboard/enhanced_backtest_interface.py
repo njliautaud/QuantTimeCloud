@@ -406,16 +406,14 @@ def render_data_and_predictions():
     st.markdown("#### 📁 Data Source")
     data_source = st.selectbox(
         "Data Source:",
-        ["Databento MBO", "Upload CSV", "Sample Data"],
+        ["Databento MBO", "Upload CSV"],
         help="Select data source for backtesting"
     )
     
     if data_source == "Databento MBO":
         render_databento_data_selection()
-    elif data_source == "Upload CSV":
-        render_csv_upload()
     else:
-        render_sample_data_config()
+        render_csv_upload()
     
     # Predictions configuration
     st.markdown("#### 🤖 Model Predictions")
@@ -429,12 +427,7 @@ def render_data_and_predictions():
             st.success("✅ Using pipeline predictions!")
     
     else:
-        st.warning("⚠️ No trained pipeline available. Train models first or use sample predictions.")
-        
-        # Sample predictions option
-        if st.checkbox("Use Sample Predictions"):
-            st.session_state.use_sample_predictions = True
-            st.info("📊 Will generate sample predictions for demonstration")
+        st.warning("⚠️ No trained pipeline available. Train models first.")
 
 
 def render_databento_data_selection():

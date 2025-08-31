@@ -314,50 +314,37 @@ class UnifiedDataSchema:
         # Execution-Aware Multi-Horizon Schema (Light)
         execution_aware_light = SchemaVersion(
             version="1.0.0",
-            description="Light execution-aware features with core multi-horizon analysis",
+            description="Light execution-aware features - CORE ESSENTIAL features only",
             created_date=datetime.now(),
             data_type=DataType.FEATURE_ENGINEERED,
             normalization_type=NormalizationType.TICK_RELATIVE,
-            feature_set=FeatureSet.ADVANCED,
+            feature_set=FeatureSet.BASIC,
             features=[
-                # Base MBO data
+                # Base MBO data (10 features)
                 'ts_event', 'ts_recv', 'action', 'side', 'order_id',
                 'price', 'size', 'flags', 'sequence', 'instrument',
+                
+                # Core processing (3 features)
                 'midprice', 'price_norm', 'size_norm',
                 
-                # Basic L3 features
+                # Essential L3 features (6 features)
                 'spread_ticks', 'depth_bid_norm', 'depth_ask_norm',
                 'ofi_norm', 'queue_fraction', 'time_delta_norm',
                 
-                # Core execution-aware features
+                # Core execution features (6 features)
                 'buy_volume', 'sell_volume', 'delta', 'delta_ratio',
-                'session_delta', 'absorption_events_1m', 'exhaustion_events_1m',
+                'session_delta', 'vwap_mid',
                 
-                # Fair value features
-                'vwap_mid', 'imbalance_adjusted_mid',
+                # Essential multi-horizon (3 horizons × 3 features = 9 features)
+                '1s_delta', '1s_volume', '1s_price_change',
+                '1m_delta', '1m_volume', '1m_price_change', 
+                '5m_delta', '5m_volume', '5m_price_change',
                 
-                # Key multi-horizon features (4 main horizons)
-                '1s_buy_volume', '1s_sell_volume', '1s_total_volume', '1s_delta', '1s_delta_ratio',
-                '1m_buy_volume', '1m_sell_volume', '1m_total_volume', '1m_delta', '1m_delta_ratio',
-                '5m_buy_volume', '5m_sell_volume', '5m_total_volume', '5m_delta', '5m_delta_ratio',
-                '20m_buy_volume', '20m_sell_volume', '20m_total_volume', '20m_delta', '20m_delta_ratio',
+                # Core time features (6 features)
+                'hour', 'minute', 'market_session', 'is_market_open', 'weekday', 'session_progress',
                 
-                # Key cumulative delta
-                '1s_cumulative_delta', '1m_cumulative_delta', '5m_cumulative_delta', '20m_cumulative_delta',
-                
-                # Key price and volatility
-                '1s_price_change', '1m_price_change', '5m_price_change', '20m_price_change',
-                '1s_volatility', '1m_volatility', '5m_volatility', '20m_volatility',
-                
-                # Key liquidity features
-                '1s_average_spread', '1m_average_spread', '5m_average_spread', '20m_average_spread',
-                '1s_depth_at_touch', '1m_depth_at_touch', '5m_depth_at_touch', '20m_depth_at_touch',
-                
-                # Core cross-horizon features
-                'delta_momentum_1s_1m', 'delta_momentum_1m_20m',
-                
-                # Legacy features
-                'ofi_fast', 'ofi_medium', 'ofi_slow', 'volatility_estimate', 'cancel_modify_ratio'
+                # Essential momentum (4 features)
+                'delta_momentum_1s_1m', 'ofi_fast', 'volatility_estimate', 'price_momentum'
             ]
         )
         self.register_schema("execution_aware_light_v1", execution_aware_light)
@@ -365,69 +352,53 @@ class UnifiedDataSchema:
         # Execution-Aware Multi-Horizon Schema (Medium)
         execution_aware_medium = SchemaVersion(
             version="1.0.0",
-            description="Medium execution-aware features with expanded multi-horizon analysis",
+            description="Medium execution-aware features - BALANCED analysis with expanded orderflow",
             created_date=datetime.now(),
             data_type=DataType.FEATURE_ENGINEERED,
             normalization_type=NormalizationType.TICK_RELATIVE,
             feature_set=FeatureSet.ADVANCED,
             features=[
-                # Base MBO data
+                # ALL LIGHT FEATURES (47 features) +
                 'ts_event', 'ts_recv', 'action', 'side', 'order_id',
                 'price', 'size', 'flags', 'sequence', 'instrument',
                 'midprice', 'price_norm', 'size_norm',
-                
-                # Basic L3 features
                 'spread_ticks', 'depth_bid_norm', 'depth_ask_norm',
                 'ofi_norm', 'queue_fraction', 'time_delta_norm',
+                'buy_volume', 'sell_volume', 'delta', 'delta_ratio',
+                'session_delta', 'vwap_mid',
+                '1s_delta', '1s_volume', '1s_price_change',
+                '1m_delta', '1m_volume', '1m_price_change', 
+                '5m_delta', '5m_volume', '5m_price_change',
+                'hour', 'minute', 'market_session', 'is_market_open', 'weekday', 'session_progress',
+                'delta_momentum_1s_1m', 'ofi_fast', 'volatility_estimate', 'price_momentum',
                 
-                # Execution-aware features
-                'buy_volume', 'sell_volume', 'aggressive_buy_volume', 'aggressive_sell_volume',
-                'passive_buy_volume', 'passive_sell_volume', 'delta', 'delta_ratio',
-                'session_delta', 'session_buy_volume', 'session_sell_volume',
-                'absorption_events_1m', 'avg_absorption_ratio', 'exhaustion_events_1m',
-                'last_execution_volume', 'last_execution_price', 'time_since_last_execution',
+                # EXPANDED execution features (12 features)
+                'aggressive_buy_volume', 'aggressive_sell_volume',
+                'passive_buy_volume', 'passive_sell_volume',
+                'absorption_events_1m', 'exhaustion_events_1m',
+                'imbalance_adjusted_mid', 'execution_weighted_mid',
+                'buy_velocity', 'sell_velocity', 'net_flow_1m', 'avg_order_size_1m',
                 
-                # Fair value features
-                'vwap_mid', 'imbalance_adjusted_mid', 'execution_weighted_mid',
+                # EXPANDED multi-horizon (6 horizons × 4 features = 24 features)
+                '100ms_delta', '100ms_volume', '100ms_price_change', '100ms_volatility',
+                '10s_delta', '10s_volume', '10s_price_change', '10s_volatility',
+                '20m_delta', '20m_volume', '20m_price_change', '20m_volatility',
+                '1h_delta', '1h_volume', '1h_price_change', '1h_volatility',
+                '1s_cumulative_delta', '1m_cumulative_delta', '5m_cumulative_delta', '20m_cumulative_delta',
+                '1s_spread', '1m_spread', '5m_spread', '20m_spread',
                 
-                # Multi-horizon volume features (8 horizons)
-                '10ms_buy_volume', '10ms_sell_volume', '10ms_total_volume', '10ms_delta', '10ms_delta_ratio',
-                '100ms_buy_volume', '100ms_sell_volume', '100ms_total_volume', '100ms_delta', '100ms_delta_ratio',
-                '1s_buy_volume', '1s_sell_volume', '1s_total_volume', '1s_delta', '1s_delta_ratio',
-                '10s_buy_volume', '10s_sell_volume', '10s_total_volume', '10s_delta', '10s_delta_ratio',
-                '1m_buy_volume', '1m_sell_volume', '1m_total_volume', '1m_delta', '1m_delta_ratio',
-                '5m_buy_volume', '5m_sell_volume', '5m_total_volume', '5m_delta', '5m_delta_ratio',
-                '20m_buy_volume', '20m_sell_volume', '20m_total_volume', '20m_delta', '20m_delta_ratio',
-                '1h_buy_volume', '1h_sell_volume', '1h_total_volume', '1h_delta', '1h_delta_ratio',
+                # BASIC microstructure (8 features)
+                'price_momentum_1m', 'volume_ratio', 'price_efficiency',
+                'large_trade_ratio', 'bid_ask_imbalance_ratio',
+                'order_flow_imbalance', 'depth_weighted_imbalance', 'liquidity_replenishment_rate',
                 
-                # Multi-horizon cumulative delta
-                '10ms_cumulative_delta', '100ms_cumulative_delta', '1s_cumulative_delta', '10s_cumulative_delta',
-                '1m_cumulative_delta', '5m_cumulative_delta', '20m_cumulative_delta', '1h_cumulative_delta',
+                # BASIC technical indicators (7 features)
+                'rsi', 'macd', 'ema_short', 'ema_long', 'bollinger_position',
+                'price_volatility', 'volume_momentum',
                 
-                # Multi-horizon absorption/exhaustion events
-                '10ms_absorption_events', '100ms_absorption_events', '1s_absorption_events', '10s_absorption_events',
-                '1m_absorption_events', '5m_absorption_events', '20m_absorption_events', '1h_absorption_events',
-                '10ms_exhaustion_events', '100ms_exhaustion_events', '1s_exhaustion_events', '10s_exhaustion_events',
-                '1m_exhaustion_events', '5m_exhaustion_events', '20m_exhaustion_events', '1h_exhaustion_events',
-                
-                # Multi-horizon price and volatility
-                '10ms_price_change', '100ms_price_change', '1s_price_change', '10s_price_change',
-                '1m_price_change', '5m_price_change', '20m_price_change', '1h_price_change',
-                '10ms_volatility', '100ms_volatility', '1s_volatility', '10s_volatility',
-                '1m_volatility', '5m_volatility', '20m_volatility', '1h_volatility',
-                
-                # Multi-horizon liquidity features
-                '10ms_average_spread', '100ms_average_spread', '1s_average_spread', '10s_average_spread',
-                '1m_average_spread', '5m_average_spread', '20m_average_spread', '1h_average_spread',
-                '10ms_depth_at_touch', '100ms_depth_at_touch', '1s_depth_at_touch', '10s_depth_at_touch',
-                '1m_depth_at_touch', '5m_depth_at_touch', '20m_depth_at_touch', '1h_depth_at_touch',
-                
-                # Cross-horizon momentum and divergence features
-                'delta_momentum_1s_1m', 'delta_momentum_1m_20m', 'volume_acceleration_ratio', 'delta_divergence_1s_1h',
-                
-                # Advanced features
-                'top_k_queue_snapshot', 'lob_image', 'event_tokens', 'patch_diffs', 'microstructure_indicators',
-                'ofi_fast', 'ofi_medium', 'ofi_slow', 'volatility_estimate', 'cancel_modify_ratio'
+                # CROSS-horizon momentum (4 features)
+                'delta_momentum_1m_20m', 'volume_acceleration_ratio',
+                'ofi_medium', 'ofi_slow'
             ]
         )
         self.register_schema("execution_aware_medium_v1", execution_aware_medium)
@@ -435,91 +406,74 @@ class UnifiedDataSchema:
         # Execution-Aware Multi-Horizon Schema (Heavy)
         execution_aware_heavy = SchemaVersion(
             version="1.0.0",
-            description="Heavy execution-aware features with comprehensive multi-horizon analysis",
+            description="Heavy execution-aware features - COMPREHENSIVE analysis with advanced engineering",
             created_date=datetime.now(),
             data_type=DataType.FEATURE_ENGINEERED,
             normalization_type=NormalizationType.TICK_RELATIVE,
             feature_set=FeatureSet.MULTI_SCALE,
             features=[
-                # Base MBO data
+                # ALL MEDIUM FEATURES (102 features) +
                 'ts_event', 'ts_recv', 'action', 'side', 'order_id',
                 'price', 'size', 'flags', 'sequence', 'instrument',
                 'midprice', 'price_norm', 'size_norm',
-                
-                # Basic L3 features
                 'spread_ticks', 'depth_bid_norm', 'depth_ask_norm',
                 'ofi_norm', 'queue_fraction', 'time_delta_norm',
+                'buy_volume', 'sell_volume', 'delta', 'delta_ratio',
+                'session_delta', 'vwap_mid',
+                '1s_delta', '1s_volume', '1s_price_change',
+                '1m_delta', '1m_volume', '1m_price_change', 
+                '5m_delta', '5m_volume', '5m_price_change',
+                'hour', 'minute', 'market_session', 'is_market_open', 'weekday', 'session_progress',
+                'delta_momentum_1s_1m', 'ofi_fast', 'volatility_estimate', 'price_momentum',
+                'aggressive_buy_volume', 'aggressive_sell_volume',
+                'passive_buy_volume', 'passive_sell_volume',
+                'absorption_events_1m', 'exhaustion_events_1m',
+                'imbalance_adjusted_mid', 'execution_weighted_mid',
+                'buy_velocity', 'sell_velocity', 'net_flow_1m', 'avg_order_size_1m',
+                '100ms_delta', '100ms_volume', '100ms_price_change', '100ms_volatility',
+                '10s_delta', '10s_volume', '10s_price_change', '10s_volatility',
+                '20m_delta', '20m_volume', '20m_price_change', '20m_volatility',
+                '1h_delta', '1h_volume', '1h_price_change', '1h_volatility',
+                '1s_cumulative_delta', '1m_cumulative_delta', '5m_cumulative_delta', '20m_cumulative_delta',
+                '1s_spread', '1m_spread', '5m_spread', '20m_spread',
+                'price_momentum_1m', 'volume_ratio', 'price_efficiency',
+                'large_trade_ratio', 'bid_ask_imbalance_ratio',
+                'order_flow_imbalance', 'depth_weighted_imbalance', 'liquidity_replenishment_rate',
+                'rsi', 'macd', 'ema_short', 'ema_long', 'bollinger_position',
+                'price_volatility', 'volume_momentum',
+                'delta_momentum_1m_20m', 'volume_acceleration_ratio',
+                'ofi_medium', 'ofi_slow',
                 
-                # Execution-aware features
-                'buy_volume', 'sell_volume', 'aggressive_buy_volume', 'aggressive_sell_volume',
-                'passive_buy_volume', 'passive_sell_volume', 'delta', 'delta_ratio',
-                'session_delta', 'session_buy_volume', 'session_sell_volume',
-                'absorption_events_1m', 'avg_absorption_ratio', 'exhaustion_events_1m',
-                'last_execution_volume', 'last_execution_price', 'time_since_last_execution',
+                # ADVANCED multi-horizon (10 horizons × 5 features = 50 features)
+                '10ms_delta', '10ms_volume', '10ms_price_change', '10ms_volatility', '10ms_cumulative_delta',
+                '50ms_delta', '50ms_volume', '50ms_price_change', '50ms_volatility', '50ms_cumulative_delta',
+                '500ms_delta', '500ms_volume', '500ms_price_change', '500ms_volatility', '500ms_cumulative_delta',
+                '3s_delta', '3s_volume', '3s_price_change', '3s_volatility', '3s_cumulative_delta',
+                '30s_delta', '30s_volume', '30s_price_change', '30s_volatility', '30s_cumulative_delta',
+                '2m_delta', '2m_volume', '2m_price_change', '2m_volatility', '2m_cumulative_delta',
+                '10m_delta', '10m_volume', '10m_price_change', '10m_volatility', '10m_cumulative_delta',
+                '30m_delta', '30m_volume', '30m_price_change', '30m_volatility', '30m_cumulative_delta',
+                '2h_delta', '2h_volume', '2h_price_change', '2h_volatility', '2h_cumulative_delta',
+                '4h_delta', '4h_volume', '4h_price_change', '4h_volatility', '4h_cumulative_delta',
                 
-                # Fair value features
-                'vwap_mid', 'imbalance_adjusted_mid', 'execution_weighted_mid',
+                # ADVANCED microstructure & orderbook features (16 features)
+                'depth_imbalance_1', 'depth_imbalance_3', 'depth_imbalance_5', 'depth_imbalance_10',
+                'market_impact_curve', 'quote_stability', 'cancel_modify_ratio',
+                'absorption_strength', 'liquidity_void_zones', 'aggression_surges',
+                'momentum_exhaustion', 'delta_pressure_gradient', 'vwap_dev',
+                'mom_divergence', 'cumulative_delta', 'flow_persistence',
                 
-                # Multi-horizon volume features (15 horizons)
-                '10ms_buy_volume', '10ms_sell_volume', '10ms_total_volume', '10ms_delta', '10ms_delta_ratio',
-                '50ms_buy_volume', '50ms_sell_volume', '50ms_total_volume', '50ms_delta', '50ms_delta_ratio',
-                '100ms_buy_volume', '100ms_sell_volume', '100ms_total_volume', '100ms_delta', '100ms_delta_ratio',
-                '500ms_buy_volume', '500ms_sell_volume', '500ms_total_volume', '500ms_delta', '500ms_delta_ratio',
-                '1s_buy_volume', '1s_sell_volume', '1s_total_volume', '1s_delta', '1s_delta_ratio',
-                '3s_buy_volume', '3s_sell_volume', '3s_total_volume', '3s_delta', '3s_delta_ratio',
-                '10s_buy_volume', '10s_sell_volume', '10s_total_volume', '10s_delta', '10s_delta_ratio',
-                '30s_buy_volume', '30s_sell_volume', '30s_total_volume', '30s_delta', '30s_delta_ratio',
-                '1m_buy_volume', '1m_sell_volume', '1m_total_volume', '1m_delta', '1m_delta_ratio',
-                '2m_buy_volume', '2m_sell_volume', '2m_total_volume', '2m_delta', '2m_delta_ratio',
-                '5m_buy_volume', '5m_sell_volume', '5m_total_volume', '5m_delta', '5m_delta_ratio',
-                '10m_buy_volume', '10m_sell_volume', '10m_total_volume', '10m_delta', '10m_delta_ratio',
-                '20m_buy_volume', '20m_sell_volume', '20m_total_volume', '20m_delta', '20m_delta_ratio',
-                '30m_buy_volume', '30m_sell_volume', '30m_total_volume', '30m_delta', '30m_delta_ratio',
-                '1h_buy_volume', '1h_sell_volume', '1h_total_volume', '1h_delta', '1h_delta_ratio',
+                # ADVANCED technical indicators (11 features)
+                'bollinger_upper', 'bollinger_lower', 'atr', 'stoch_k', 'stoch_d',
+                'williams_r', 'cci', 'mfi', 'adx', 'aroon_up', 'aroon_down',
                 
-                # Multi-horizon cumulative delta
-                '10ms_cumulative_delta', '50ms_cumulative_delta', '100ms_cumulative_delta', '500ms_cumulative_delta',
-                '1s_cumulative_delta', '3s_cumulative_delta', '10s_cumulative_delta', '30s_cumulative_delta',
-                '1m_cumulative_delta', '2m_cumulative_delta', '5m_cumulative_delta', '10m_cumulative_delta',
-                '20m_cumulative_delta', '30m_cumulative_delta', '1h_cumulative_delta',
+                # ADVANCED time features (5 features)
+                'second', 'time_decimal', 'is_monday', 'is_friday', 'is_weekend',
                 
-                # Multi-horizon absorption/exhaustion events
-                '10ms_absorption_events', '50ms_absorption_events', '100ms_absorption_events', '500ms_absorption_events',
-                '1s_absorption_events', '3s_absorption_events', '10s_absorption_events', '30s_absorption_events',
-                '1m_absorption_events', '2m_absorption_events', '5m_absorption_events', '10m_absorption_events',
-                '20m_absorption_events', '30m_absorption_events', '1h_absorption_events',
-                '10ms_exhaustion_events', '50ms_exhaustion_events', '100ms_exhaustion_events', '500ms_exhaustion_events',
-                '1s_exhaustion_events', '3s_exhaustion_events', '10s_exhaustion_events', '30s_exhaustion_events',
-                '1m_exhaustion_events', '2m_exhaustion_events', '5m_exhaustion_events', '10m_exhaustion_events',
-                '20m_exhaustion_events', '30m_exhaustion_events', '1h_exhaustion_events',
-                
-                # Multi-horizon price and volatility
-                '10ms_price_change', '50ms_price_change', '100ms_price_change', '500ms_price_change',
-                '1s_price_change', '3s_price_change', '10s_price_change', '30s_price_change',
-                '1m_price_change', '2m_price_change', '5m_price_change', '10m_price_change',
-                '20m_price_change', '30m_price_change', '1h_price_change',
-                '10ms_volatility', '50ms_volatility', '100ms_volatility', '500ms_volatility',
-                '1s_volatility', '3s_volatility', '10s_volatility', '30s_volatility',
-                '1m_volatility', '2m_volatility', '5m_volatility', '10m_volatility',
-                '20m_volatility', '30m_volatility', '1h_volatility',
-                
-                # Multi-horizon liquidity features
-                '10ms_average_spread', '50ms_average_spread', '100ms_average_spread', '500ms_average_spread',
-                '1s_average_spread', '3s_average_spread', '10s_average_spread', '30s_average_spread',
-                '1m_average_spread', '2m_average_spread', '5m_average_spread', '10m_average_spread',
-                '20m_average_spread', '30m_average_spread', '1h_average_spread',
-                '10ms_depth_at_touch', '50ms_depth_at_touch', '100ms_depth_at_touch', '500ms_depth_at_touch',
-                '1s_depth_at_touch', '3s_depth_at_touch', '10s_depth_at_touch', '30s_depth_at_touch',
-                '1m_depth_at_touch', '2m_depth_at_touch', '5m_depth_at_touch', '10m_depth_at_touch',
-                '20m_depth_at_touch', '30m_depth_at_touch', '1h_depth_at_touch',
-                
-                # Cross-horizon momentum and divergence features
-                'delta_momentum_1s_1m', 'delta_momentum_1m_20m', 'delta_momentum_10s_5m', 'delta_momentum_5m_1h',
-                'volume_acceleration_ratio', 'delta_divergence_1s_1h', 'delta_divergence_10s_30m',
-                
-                # Advanced features
-                'top_k_queue_snapshot', 'lob_image', 'event_tokens', 'patch_diffs', 'microstructure_indicators',
-                'ofi_fast', 'ofi_medium', 'ofi_slow', 'volatility_estimate', 'cancel_modify_ratio'
+                # CROSS-horizon momentum & divergence (8 features)
+                'delta_momentum_10s_5m', 'delta_momentum_5m_1h', 'delta_momentum_50ms_1s',
+                'delta_divergence_1s_1h', 'delta_divergence_10s_30m', 'volume_acceleration_short',
+                'volume_acceleration_medium', 'volume_acceleration_long'
             ]
         )
         self.register_schema("execution_aware_heavy_v1", execution_aware_heavy)
@@ -527,103 +481,113 @@ class UnifiedDataSchema:
         # Execution-Aware Multi-Horizon Schema (Extreme)
         execution_aware_extreme = SchemaVersion(
             version="1.0.0",
-            description="Extreme execution-aware features with maximum multi-horizon analysis",
+            description="EXTREME execution-aware features - ALL FEATURES from ALL modules including ultra-microstructure",
             created_date=datetime.now(),
             data_type=DataType.FEATURE_ENGINEERED,
             normalization_type=NormalizationType.TICK_RELATIVE,
             feature_set=FeatureSet.COMPREHENSIVE,
             features=[
-                # Base MBO data
+                # ALL HEAVY FEATURES (192 features) +
                 'ts_event', 'ts_recv', 'action', 'side', 'order_id',
                 'price', 'size', 'flags', 'sequence', 'instrument',
                 'midprice', 'price_norm', 'size_norm',
-                
-                # Basic L3 features
                 'spread_ticks', 'depth_bid_norm', 'depth_ask_norm',
                 'ofi_norm', 'queue_fraction', 'time_delta_norm',
+                'buy_volume', 'sell_volume', 'delta', 'delta_ratio',
+                'session_delta', 'vwap_mid',
+                '1s_delta', '1s_volume', '1s_price_change',
+                '1m_delta', '1m_volume', '1m_price_change', 
+                '5m_delta', '5m_volume', '5m_price_change',
+                'hour', 'minute', 'market_session', 'is_market_open', 'weekday', 'session_progress',
+                'delta_momentum_1s_1m', 'ofi_fast', 'volatility_estimate', 'price_momentum',
+                'aggressive_buy_volume', 'aggressive_sell_volume',
+                'passive_buy_volume', 'passive_sell_volume',
+                'absorption_events_1m', 'exhaustion_events_1m',
+                'imbalance_adjusted_mid', 'execution_weighted_mid',
+                'buy_velocity', 'sell_velocity', 'net_flow_1m', 'avg_order_size_1m',
+                '100ms_delta', '100ms_volume', '100ms_price_change', '100ms_volatility',
+                '10s_delta', '10s_volume', '10s_price_change', '10s_volatility',
+                '20m_delta', '20m_volume', '20m_price_change', '20m_volatility',
+                '1h_delta', '1h_volume', '1h_price_change', '1h_volatility',
+                '1s_cumulative_delta', '1m_cumulative_delta', '5m_cumulative_delta', '20m_cumulative_delta',
+                '1s_spread', '1m_spread', '5m_spread', '20m_spread',
+                'price_momentum_1m', 'volume_ratio', 'price_efficiency',
+                'large_trade_ratio', 'bid_ask_imbalance_ratio',
+                'order_flow_imbalance', 'depth_weighted_imbalance', 'liquidity_replenishment_rate',
+                'rsi', 'macd', 'ema_short', 'ema_long', 'bollinger_position',
+                'price_volatility', 'volume_momentum',
+                'delta_momentum_1m_20m', 'volume_acceleration_ratio',
+                'ofi_medium', 'ofi_slow',
+                '10ms_delta', '10ms_volume', '10ms_price_change', '10ms_volatility', '10ms_cumulative_delta',
+                '50ms_delta', '50ms_volume', '50ms_price_change', '50ms_volatility', '50ms_cumulative_delta',
+                '500ms_delta', '500ms_volume', '500ms_price_change', '500ms_volatility', '500ms_cumulative_delta',
+                '3s_delta', '3s_volume', '3s_price_change', '3s_volatility', '3s_cumulative_delta',
+                '30s_delta', '30s_volume', '30s_price_change', '30s_volatility', '30s_cumulative_delta',
+                '2m_delta', '2m_volume', '2m_price_change', '2m_volatility', '2m_cumulative_delta',
+                '10m_delta', '10m_volume', '10m_price_change', '10m_volatility', '10m_cumulative_delta',
+                '30m_delta', '30m_volume', '30m_price_change', '30m_volatility', '30m_cumulative_delta',
+                '2h_delta', '2h_volume', '2h_price_change', '2h_volatility', '2h_cumulative_delta',
+                '4h_delta', '4h_volume', '4h_price_change', '4h_volatility', '4h_cumulative_delta',
+                'depth_imbalance_1', 'depth_imbalance_3', 'depth_imbalance_5', 'depth_imbalance_10',
+                'market_impact_curve', 'quote_stability', 'cancel_modify_ratio',
+                'absorption_strength', 'liquidity_void_zones', 'aggression_surges',
+                'momentum_exhaustion', 'delta_pressure_gradient', 'vwap_dev',
+                'mom_divergence', 'cumulative_delta', 'flow_persistence',
+                'bollinger_upper', 'bollinger_lower', 'atr', 'stoch_k', 'stoch_d',
+                'williams_r', 'cci', 'mfi', 'adx', 'aroon_up', 'aroon_down',
+                'second', 'time_decimal', 'is_monday', 'is_friday', 'is_weekend',
+                'delta_momentum_10s_5m', 'delta_momentum_5m_1h', 'delta_momentum_50ms_1s',
+                'delta_divergence_1s_1h', 'delta_divergence_10s_30m', 'volume_acceleration_short',
+                'volume_acceleration_medium', 'volume_acceleration_long',
                 
-                # Execution-aware features
-                'buy_volume', 'sell_volume', 'aggressive_buy_volume', 'aggressive_sell_volume',
-                'passive_buy_volume', 'passive_sell_volume', 'delta', 'delta_ratio',
-                'session_delta', 'session_buy_volume', 'session_sell_volume',
-                'absorption_events_1m', 'avg_absorption_ratio', 'exhaustion_events_1m',
-                'last_execution_volume', 'last_execution_price', 'time_since_last_execution',
+                # ULTRA-MICROSTRUCTURE FEATURES (69 features from microstructure_features.py)
+                'micro_aggression_ratio_10e', 'micro_aggression_ratio_25e', 'micro_aggression_ratio_50e',
+                'micro_aggression_ratio_100e', 'micro_aggression_ratio_200e', 'micro_aggression_ratio_500e',
+                'micro_buy_ratio_10e', 'micro_buy_ratio_25e', 'micro_buy_ratio_50e',
+                'micro_buy_ratio_100e', 'micro_buy_ratio_200e', 'micro_buy_ratio_500e',
+                'micro_volume_intensity_10e', 'micro_volume_intensity_25e', 'micro_volume_intensity_50e',
+                'micro_volume_intensity_100e', 'micro_volume_intensity_200e', 'micro_volume_intensity_500e',
+                'micro_price_volatility_10e', 'micro_price_volatility_25e', 'micro_price_volatility_50e',
+                'micro_price_volatility_100e', 'micro_price_volatility_200e', 'micro_price_volatility_500e',
+                'micro_large_order_freq_10e', 'micro_large_order_freq_25e', 'micro_large_order_freq_50e',
+                'micro_large_order_freq_100e', 'micro_large_order_freq_200e', 'micro_large_order_freq_500e',
+                'micro_price_momentum_10e', 'micro_tick_direction', 'micro_tick_momentum_50e',
+                'micro_time_since_last', 'micro_event_rate',
+                'micro_queue_position_advantage', 'micro_queue_depth_ratio', 'micro_ahead_in_queue',
+                'micro_book_dominance_flip', 'micro_level_concentration',
+                'micro_liquidity_pulled_volume', 'micro_void_creation_speed', 'micro_void_probability',
+                'micro_book_flip_intensity', 'micro_level_flip_rate', 'micro_dominance_reversal',
+                'micro_liquidity_momentum',
+                'micro_spoof_probability', 'micro_fake_liquidity_ratio', 'micro_manipulation_score',
+                'micro_order_lifecycle_suspicion',
+                'micro_sweep_probability', 'micro_sweep_depth_levels', 'micro_sweep_intensity',
+                'micro_multi_level_consumption', 'micro_recent_sweep_count', 'micro_sweep_volume_rate',
+                'micro_sequence_momentum', 'micro_aggressive_sequence_length', 'micro_size_escalation',
+                'micro_sequence_urgency', 'micro_momentum_acceleration', 'micro_urgency_trend',
+                'micro_flow_intensity_100us', 'micro_flow_intensity_1ms', 'micro_flow_intensity_10ms',
+                'micro_flow_burst_ratio', 'micro_flow_density_change', 'micro_adaptive_window',
                 
-                # Fair value features
-                'vwap_mid', 'imbalance_adjusted_mid', 'execution_weighted_mid',
+                # ORDERFLOW CLASSIFICATION FEATURES (11 features from orderflow_classification.py)
+                'flow_toxicity_score', 'toxic_flow_ratio', 'benign_flow_ratio',
+                'information_content', 'adverse_selection_risk', 'flow_persistence',
+                'timing_sophistication', 'venue_coordination', 'size_aggressiveness',
+                'institutional_flow_score', 'market_maker_flow_score',
                 
-                # Multi-horizon volume features (15 horizons)
-                '10ms_buy_volume', '10ms_sell_volume', '10ms_total_volume', '10ms_delta', '10ms_delta_ratio',
-                '50ms_buy_volume', '50ms_sell_volume', '50ms_total_volume', '50ms_delta', '50ms_delta_ratio',
-                '100ms_buy_volume', '100ms_sell_volume', '100ms_total_volume', '100ms_delta', '100ms_delta_ratio',
-                '500ms_buy_volume', '500ms_sell_volume', '500ms_total_volume', '500ms_delta', '500ms_delta_ratio',
-                '1s_buy_volume', '1s_sell_volume', '1s_total_volume', '1s_delta', '1s_delta_ratio',
-                '3s_buy_volume', '3s_sell_volume', '3s_total_volume', '3s_delta', '3s_delta_ratio',
-                '10s_buy_volume', '10s_sell_volume', '10s_total_volume', '10s_delta', '10s_delta_ratio',
-                '30s_buy_volume', '30s_sell_volume', '30s_total_volume', '30s_delta', '30s_delta_ratio',
-                '1m_buy_volume', '1m_sell_volume', '1m_total_volume', '1m_delta', '1m_delta_ratio',
-                '2m_buy_volume', '2m_sell_volume', '2m_total_volume', '2m_delta', '2m_delta_ratio',
-                '5m_buy_volume', '5m_sell_volume', '5m_total_volume', '5m_delta', '5m_delta_ratio',
-                '10m_buy_volume', '10m_sell_volume', '10m_total_volume', '10m_delta', '10m_delta_ratio',
-                '20m_buy_volume', '20m_sell_volume', '20m_total_volume', '20m_delta', '20m_delta_ratio',
-                '30m_buy_volume', '30m_sell_volume', '30m_total_volume', '30m_delta', '30m_delta_ratio',
-                '1h_buy_volume', '1h_sell_volume', '1h_total_volume', '1h_delta', '1h_delta_ratio',
-                
-                # Multi-horizon cumulative delta
-                '10ms_cumulative_delta', '50ms_cumulative_delta', '100ms_cumulative_delta', '500ms_cumulative_delta',
-                '1s_cumulative_delta', '3s_cumulative_delta', '10s_cumulative_delta', '30s_cumulative_delta',
-                '1m_cumulative_delta', '2m_cumulative_delta', '5m_cumulative_delta', '10m_cumulative_delta',
-                '20m_cumulative_delta', '30m_cumulative_delta', '1h_cumulative_delta',
-                
-                # Multi-horizon absorption/exhaustion events
-                '10ms_absorption_events', '50ms_absorption_events', '100ms_absorption_events', '500ms_absorption_events',
-                '1s_absorption_events', '3s_absorption_events', '10s_absorption_events', '30s_absorption_events',
-                '1m_absorption_events', '2m_absorption_events', '5m_absorption_events', '10m_absorption_events',
-                '20m_absorption_events', '30m_absorption_events', '1h_absorption_events',
-                '10ms_exhaustion_events', '50ms_exhaustion_events', '100ms_exhaustion_events', '500ms_exhaustion_events',
-                '1s_exhaustion_events', '3s_exhaustion_events', '10s_exhaustion_events', '30s_exhaustion_events',
-                '1m_exhaustion_events', '2m_exhaustion_events', '5m_exhaustion_events', '10m_exhaustion_events',
-                '20m_exhaustion_events', '30m_exhaustion_events', '1h_exhaustion_events',
-                
-                # Multi-horizon price and volatility
-                '10ms_price_change', '50ms_price_change', '100ms_price_change', '500ms_price_change',
-                '1s_price_change', '3s_price_change', '10s_price_change', '30s_price_change',
-                '1m_price_change', '2m_price_change', '5m_price_change', '10m_price_change',
-                '20m_price_change', '30m_price_change', '1h_price_change',
-                '10ms_volatility', '50ms_volatility', '100ms_volatility', '500ms_volatility',
-                '1s_volatility', '3s_volatility', '10s_volatility', '30s_volatility',
-                '1m_volatility', '2m_volatility', '5m_volatility', '10m_volatility',
-                '20m_volatility', '30m_volatility', '1h_volatility',
-                
-                # Multi-horizon liquidity features
-                '10ms_average_spread', '50ms_average_spread', '100ms_average_spread', '500ms_average_spread',
-                '1s_average_spread', '3s_average_spread', '10s_average_spread', '30s_average_spread',
-                '1m_average_spread', '2m_average_spread', '5m_average_spread', '10m_average_spread',
-                '20m_average_spread', '30m_average_spread', '1h_average_spread',
-                '10ms_depth_at_touch', '50ms_depth_at_touch', '100ms_depth_at_touch', '500ms_depth_at_touch',
-                '1s_depth_at_touch', '3s_depth_at_touch', '10s_depth_at_touch', '30s_depth_at_touch',
-                '1m_depth_at_touch', '2m_depth_at_touch', '5m_depth_at_touch', '10m_depth_at_touch',
-                '20m_depth_at_touch', '30m_depth_at_touch', '1h_depth_at_touch',
-                
-                # Cross-horizon momentum and divergence features
-                'delta_momentum_1s_1m', 'delta_momentum_1m_20m', 'delta_momentum_10s_5m', 'delta_momentum_5m_1h',
-                'volume_acceleration_ratio', 'delta_divergence_1s_1h', 'delta_divergence_10s_30m',
-                'delta_momentum_50ms_1s', 'delta_momentum_100ms_10s', 'delta_momentum_500ms_30s',
-                'volume_acceleration_short', 'volume_acceleration_medium', 'volume_acceleration_long',
-                'delta_divergence_50ms_5m', 'delta_divergence_100ms_10m', 'delta_divergence_500ms_20m',
-                
-                # Advanced features
-                'top_k_queue_snapshot', 'lob_image', 'event_tokens', 'patch_diffs', 'microstructure_indicators',
-                'ofi_fast', 'ofi_medium', 'ofi_slow', 'volatility_estimate', 'cancel_modify_ratio',
-                
-                # Additional extreme features
+                # COMPREHENSIVE ORDER FLOW FEATURES (additional advanced features)
                 'execution_cluster_strength', 'execution_cluster_migration', 'execution_cluster_persistence',
                 'aggressor_size_distribution', 'aggressor_frequency', 'aggressor_persistence',
-                'market_impact_curve', 'liquidity_resilience', 'quote_stability',
-                'large_order_fragmentation', 'institutional_flow_strength', 'iceberg_detection',
-                'flow_autocorrelation', 'flow_predictability', 'flow_exhaustion_signals',
+                'liquidity_resilience', 'large_order_fragmentation', 'institutional_flow_strength',
+                'iceberg_detection', 'flow_autocorrelation', 'flow_predictability', 'flow_exhaustion_signals',
+                
+                # REGIME & ADVANCED PATTERN FEATURES
                 'volatility_regime', 'regime_transition_probability', 'regime_persistence',
-                'liquidity_regime', 'liquidity_stress_indicators', 'liquidity_recovery_signals'
+                'liquidity_regime', 'liquidity_stress_indicators', 'liquidity_recovery_signals',
+                'pattern_momentum_convergence', 'pattern_volume_surge', 'pattern_liquidity_trap',
+                'pattern_breakout_strength', 'pattern_reversal_probability',
+                
+                # LATENCY & TIMING FEATURES (critical for extreme performance)
+                'latency_adjusted_alpha', 'competitive_window_remaining', 'alpha_decay_rate',
+                'processing_lag_impact', 'timing_advantage_score', 'decision_urgency_index'
             ]
         )
         self.register_schema("execution_aware_extreme_v1", execution_aware_extreme)

@@ -30,6 +30,7 @@ class SFTPNode:
     username: str = "jupiter"
     key_path: Optional[str] = None
     password: Optional[str] = None
+    platform: str = "linux"
     large_file_dirs: List[str] = field(default_factory=list)
     status: str = "offline"
     last_sync: Optional[datetime] = None
@@ -77,9 +78,12 @@ class SFTPManager:
         # Initialize nodes
         self._initialize_nodes()
         
-        # Start monitoring thread
-        self.monitoring_thread = threading.Thread(target=self._monitor_sync, daemon=True)
-        self.monitoring_thread.start()
+        # Start monitoring thread (disabled for now to prevent automatic connections)
+        # self.monitoring_thread = threading.Thread(target=self._monitor_sync, daemon=True)
+        # self.monitoring_thread.start()
+        
+        # Disable automatic node connection during startup
+        logger.info("SFTP Manager initialized - automatic connections disabled")
     
     def _load_config(self) -> Dict[str, Any]:
         """Load SFTP configuration"""
@@ -94,7 +98,9 @@ class SFTPManager:
                         "name": "Development Laptop",
                         "host": "localhost",
                         "port": 22,
-                        "username": "jupiter",
+                        "username": "user",
+                        "password": null,
+                        "key_path": null,
                         "large_file_dirs": [
                             "data/es_futures",
                             "data/processed", 
@@ -108,6 +114,8 @@ class SFTPManager:
                         "host": "jupiter",
                         "port": 22,
                         "username": "jupiter",
+                        "password": null,
+                        "key_path": null,
                         "large_file_dirs": [
                             "/opt/quanttime/data/es_futures",
                             "/opt/quanttime/data/processed",
@@ -121,6 +129,8 @@ class SFTPManager:
                         "host": "saturn",
                         "port": 22,
                         "username": "jupiter",
+                        "password": null,
+                        "key_path": null,
                         "large_file_dirs": [
                             "/opt/quanttime/data/es_futures",
                             "/opt/quanttime/data/processed",
@@ -152,28 +162,85 @@ class SFTPManager:
             node = SFTPNode(node_id=node_id, **node_config)
             self.nodes[node_id] = node
     
+    def set_node_password(self, node_id: str, password: str):
+        """Set password for a node"""
+        if node_id in self.nodes:
+            self.nodes[node_id].password = password
+            logger.info(f"Password set for node {node_id}")
+        else:
+            logger.error(f"Node {node_id} not found")
+    
+    def test_node_connection(self, node_id: str) -> bool:
+        """Test connection to a specific node"""
+        if node_id not in self.nodes:
+            logger.error(f"Node {node_id} not found")
+            return False
+        
+        node = self.nodes[node_id]
+        ssh = self._get_ssh_connection(node)
+        if ssh:
+            ssh.close()
+            node.status = "online"
+            return True
+        else:
+            node.status = "offline"
+            return False
+    
     def _get_ssh_connection(self, node: SFTPNode) -> Optional[paramiko.SSHClient]:
         """Get SSH connection to node"""
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
-            if node.key_path and os.path.exists(node.key_path):
-                ssh.connect(
-                    node.host, 
-                    port=node.port,
-                    username=node.username,
-                    key_filename=node.key_path
-                )
-            else:
-                ssh.connect(
-                    node.host,
-                    port=node.port, 
-                    username=node.username,
-                    password=node.password
-                )
+            # Try password authentication first if password is provided
+            if node.password:
+                try:
+                    ssh.connect(
+                        node.host,
+                        port=node.port, 
+                        username=node.username,
+                        password=node.password,
+                        timeout=10
+                    )
+                    logger.info(f"Successfully connected to {node.name} using password authentication")
+                    return ssh
+                except Exception as e:
+                    logger.warning(f"Password authentication failed for {node.name}: {e}")
             
-            return ssh
+            # Try SSH key authentication if key path is provided
+            if node.key_path and os.path.exists(node.key_path):
+                try:
+                    ssh.connect(
+                        node.host, 
+                        port=node.port,
+                        username=node.username,
+                        key_filename=node.key_path,
+                        timeout=10
+                    )
+                    logger.info(f"Successfully connected to {node.name} using SSH key authentication")
+                    return ssh
+                except Exception as e:
+                    logger.warning(f"SSH key authentication failed for {node.name}: {e}")
+            
+            # For localhost, try without authentication
+            if node.host in ["localhost", "127.0.0.1"]:
+                try:
+                    ssh.connect(
+                        node.host,
+                        port=node.port,
+                        username=node.username,
+                        timeout=10
+                    )
+                    logger.info(f"Successfully connected to {node.name} (localhost)")
+                    return ssh
+                except Exception as e:
+                    logger.warning(f"Localhost connection failed for {node.name}: {e}")
+            
+            logger.error(f"All authentication methods failed for {node.name}")
+            node.status = "offline"
+            node.sync_errors.append("Authentication failed")
+            return None
+            
         except Exception as e:
             logger.error(f"Failed to connect to {node.name}: {e}")
             node.status = "offline"
@@ -259,18 +326,41 @@ class SFTPManager:
             return large_files
     
     def _detect_sync_discrepancies(self) -> Dict[str, List[Dict[str, Any]]]:
-        """Detect discrepancies between nodes"""
+        """Detect discrepancies between nodes with enhanced Git sync integration"""
         discrepancies = {}
+        
+        # Import Git sync manager for enhanced discrepancy detection
+        try:
+            from quanttime.core.git_sync_manager import git_sync_manager
+            use_git_sync = True
+        except ImportError:
+            use_git_sync = False
         
         # Scan all nodes
         node_files = {}
         for node_id, node in self.nodes.items():
+            if node_id == "laptop":
+                continue  # Skip laptop for file scanning
+                
             node_files[node_id] = self._scan_large_files(node)
         
-        # Compare files between nodes
+        # Compare files between nodes and integrate with Git sync
         for node_id, files in node_files.items():
             discrepancies[node_id] = []
             
+            # Enhanced Git sync discrepancy detection
+            if use_git_sync and git_sync_manager.github_pat:
+                try:
+                    ssh = self._get_ssh_connection(node_id)
+                    if ssh:
+                        success, git_discrepancies = git_sync_manager.detect_sync_discrepancies(node_id, ssh)
+                        if success:
+                            discrepancies[node_id].extend(git_discrepancies)
+                        ssh.close()
+                except Exception as e:
+                    logger.warning(f"Git sync discrepancy detection failed for {node_id}: {e}")
+            
+            # Traditional file-based discrepancy detection
             for file_info in files:
                 file_key = f"{file_info.path}"
                 
@@ -477,9 +567,6 @@ class SFTPManager:
             
         except Exception as e:
             return False
-            },
-            "discrepancies": self._detect_sync_discrepancies()
-        }
 
 
 # Ray remote functions for distributed SFTP operations

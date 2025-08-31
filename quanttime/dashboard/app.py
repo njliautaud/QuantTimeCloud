@@ -9,8 +9,21 @@ import os
 import sys
 import time
 import logging
+import traceback
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
+
+# Configure comprehensive logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/dashboard.log'),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 import pandas as pd
 import numpy as np
@@ -25,23 +38,53 @@ import contextlib
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
+# Log startup information
+logger.info("Starting QuantTime Dashboard")
+logger.info(f"Project root: {ROOT}")
+logger.info(f"Python path: {sys.path[:3]}...")  # Log first 3 entries
+
 import plotly.graph_objects as go
 import plotly.express as px
 
-from quanttime.utils.config import AppConfig
-from quanttime.runtime.hist_service import (
-    get_available_databento_dates,
-    get_databento_symbols,
-    load_mbo_data_for_analysis,
-    generate_orderbook_snapshot,
-    generate_footprint_data,
-    get_mbo_statistics,
-    get_historical_data_official,
-    validate_mbo_data_quality,
-    resolve_symbols_official,
-    get_available_symbols_official,
-    get_dataset_info_official
-)
+# Import core modules with error handling
+try:
+    from quanttime.utils.config import AppConfig
+    logger.info("Successfully imported AppConfig")
+except Exception as e:
+    logger.error(f"Failed to import AppConfig: {e}")
+    logger.error(traceback.format_exc())
+    AppConfig = None
+
+try:
+    from quanttime.runtime.hist_service import (
+        get_available_databento_dates,
+        get_databento_symbols,
+        load_mbo_data_for_analysis,
+        generate_orderbook_snapshot,
+        generate_footprint_data,
+        get_mbo_statistics,
+        get_historical_data_official,
+        validate_mbo_data_quality,
+        resolve_symbols_official,
+        get_available_symbols_official,
+        get_dataset_info_official
+    )
+    logger.info("Successfully imported hist_service functions")
+except Exception as e:
+    logger.error(f"Failed to import hist_service functions: {e}")
+    logger.error(traceback.format_exc())
+    # Set fallback functions
+    get_available_databento_dates = lambda: []
+    get_databento_symbols = lambda: []
+    load_mbo_data_for_analysis = lambda *args, **kwargs: None
+    generate_orderbook_snapshot = lambda *args, **kwargs: None
+    generate_footprint_data = lambda *args, **kwargs: None
+    get_mbo_statistics = lambda *args, **kwargs: {}
+    get_historical_data_official = lambda *args, **kwargs: None
+    validate_mbo_data_quality = lambda *args, **kwargs: {}
+    resolve_symbols_official = lambda *args, **kwargs: []
+    get_available_symbols_official = lambda *args, **kwargs: []
+    get_dataset_info_official = lambda *args, **kwargs: {}
 from quanttime.runtime.live_service import get_live_service
 from quanttime.runtime.stream_service import get_chart_stream_service
 from quanttime.dashboard.components import (
@@ -69,7 +112,7 @@ from quanttime.dashboard.server_deployment import render_server_deployment
 from quanttime.dashboard.task_progress_tracker import progress_tracker
 from quanttime.dashboard.hybrid_pipeline_interface import render_hybrid_pipeline_interface
 from quanttime.dashboard.enhanced_backtest_interface import render_enhanced_backtest_interface
-from quanttime.dashboard.syncthing_ray_interface import render_syncthing_ray_interface
+
 from quanttime.dashboard.sftp_interface import render_sftp_interface, render_sftp_ray_integration
 from quanttime.dashboard.config_wizard import show_config_wizard
 from quanttime.dashboard.node_deployment import render_node_deployment_interface
@@ -109,13 +152,8 @@ logger = setup_logging(
     device_type="laptop"
 )
 
-# Page configuration
-st.set_page_config(
-    page_title="QuantTime ML Trading Suite",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Page configuration - moved to run_quanttime.py to avoid conflicts
+# st.set_page_config() is now called in the main launcher
 
 # Initialize session state for button responsiveness
 if 'processing_active' not in st.session_state:
@@ -4519,9 +4557,99 @@ def execute_sync_plan(sync_plan, servers, sync_dirs):
 
 
 def main():
+    # Check if initial configuration is complete
+    if not st.session_state.get("initial_config_complete", False):
+        st.warning("⚠️ Initial configuration not complete. Please complete the initial setup.")
+        
+        # Show initial configuration interface inline
+        from quanttime.dashboard.initial_config import render_initial_config_page
+        render_initial_config_page()
+        return
+    
     # Check if configuration is needed
     if show_config_wizard():
         return
+    
+    # Automatic sync check at dashboard startup
+    if not st.session_state.get("sync_check_completed", False):
+        try:
+            # Import sync managers
+            from quanttime.core.git_sync_manager import git_sync_manager
+            from quanttime.dashboard.initial_config import InitialConfigManager
+            
+            # Get connected nodes from persistent storage
+            from quanttime.dashboard.node_status_manager import node_status_manager
+            connected_nodes = node_status_manager.get_connected_nodes()
+            
+            if connected_nodes:
+                # Initialize config manager for SSH connections
+                config_manager = InitialConfigManager()
+                
+                # Run automatic sync check
+                with st.spinner("🔄 Running automatic sync check..."):
+                    sync_results = {}
+                    
+                    for node_id in connected_nodes:
+                        try:
+                            # Get node info and credentials from persistent storage
+                            node_info = config_manager.nodes.get(node_id, {})
+                            node_status_info = node_status_manager.get_node_status(node_id)
+                            
+                            if not node_status_info.get("connected", False):
+                                continue
+                            
+                            # Get credentials from persistent storage
+                            username = node_status_info.get("username", "")
+                            if not username:
+                                continue
+                            
+                            # Extract password from persistent storage (if available)
+                            password = None
+                            if "ssh_credentials" in st.session_state:
+                                password = st.session_state.ssh_credentials.get(node_id, {}).get("password")
+                            
+                            if not password:
+                                continue
+                            
+                            # Parse username@host format
+                            if "@" in username:
+                                username_part, host_part = username.split("@", 1)
+                            else:
+                                username_part = username
+                                host_part = node_info.get("host", "")
+                            
+                            # Create SSH connection using the same method as initial config
+                            ssh_client = config_manager._create_ssh_connection(host_part, username_part, password)
+                            if ssh_client:
+                                try:
+                                    success, discrepancies = git_sync_manager.detect_sync_discrepancies(node_id, ssh_client)
+                                    
+                                    if success and discrepancies:
+                                        sync_results[node_id] = discrepancies
+                                finally:
+                                    ssh_client.close()
+                        except Exception as e:
+                            logger.warning(f"Auto sync check failed for {node_id}: {e}")
+                    
+                    # Store results and mark as completed
+                    st.session_state.auto_sync_results = sync_results
+                    st.session_state.sync_check_completed = True
+                    
+                    # Show results if there are discrepancies
+                    if sync_results:
+                        st.warning("⚠️ Sync discrepancies detected during startup!")
+                        with st.expander("🔍 View Sync Discrepancies", expanded=False):
+                            for node_id, discrepancies in sync_results.items():
+                                st.markdown(f"**{node_id.upper()}:** {len(discrepancies)} discrepancies")
+                                for discrepancy in discrepancies[:3]:  # Show first 3
+                                    st.markdown(f"- {discrepancy.get('type', 'unknown')}")
+                                if len(discrepancies) > 3:
+                                    st.markdown(f"- *... and {len(discrepancies) - 3} more*")
+                        st.info("💡 Use 'Sync Check' in Quick Actions to view details and 'Sync All' to fix")
+                    
+        except Exception as e:
+            logger.warning(f"Automatic sync check failed: {e}")
+            st.session_state.sync_check_completed = True  # Mark as completed to avoid repeated failures
     
     st.markdown('<h1 class="main-header">QuantTime ML Trading Suite</h1>', unsafe_allow_html=True)
     
@@ -4536,7 +4664,7 @@ def main():
     
     if selected_device == "laptop":
         # Laptop dashboard - simplified with core tabs
-        tabs = st.tabs(["🚀 Auto", "📊 Overview", "🤖 Models", "🏋️ Train", "📈 Backtests", "📁 Data", "🏆 Leaderboard", "⚙️ Settings"])
+        tabs = st.tabs(["🚀 Auto", "🤖 Smart Automation", "📊 Overview", "🤖 Models", "🏋️ Train", "📈 Backtests", "📁 Data", "🏆 Leaderboard", "📊 Monitoring", "⚡ Ray", "⚙️ Settings"])
         
         with tabs[0]:
             st.subheader("🚀 Auto Mode")
@@ -4552,29 +4680,56 @@ def main():
                 st.metric("Data", "81 Files")
         
         with tabs[1]:
-            overview_tab()
+            # Smart Automation tab
+            try:
+                from quanttime.dashboard.smart_automation_interface import render_smart_automation_dashboard
+                render_smart_automation_dashboard()
+            except Exception as e:
+                st.error(f"Failed to load Smart Automation interface: {e}")
+                st.info("Smart Automation features are currently being set up. Please check back soon.")
         
         with tabs[2]:
-            models_tab()
+            overview_tab()
         
         with tabs[3]:
-            train_tab()
+            models_tab()
         
         with tabs[4]:
-            render_enhanced_backtest_interface()
+            train_tab()
         
         with tabs[5]:
-            data_tab()
+            render_enhanced_backtest_interface()
         
         with tabs[6]:
-            leaderboard_tab()
+            data_tab()
         
         with tabs[7]:
+            leaderboard_tab()
+        
+        with tabs[8]:
+            # Monitoring tab
+            try:
+                from quanttime.dashboard.monitoring_interface import monitoring_interface
+                monitoring_interface.render_monitoring_tab()
+            except ImportError as e:
+                st.error(f"Monitoring interface not available: {e}")
+                st.info("Please ensure monitoring files are in place")
+        
+        with tabs[9]:
+            # Ray tab
+            try:
+                from quanttime.dashboard.ray_interface import ray_interface
+                ray_interface()
+            except ImportError as e:
+                st.error(f"Ray interface not available: {e}")
+                st.info("Please ensure ray_interface.py is in place")
+        
+        with tabs[10]:
             # Settings tab with all advanced features
             st.subheader("⚙️ Advanced Settings")
             
                         # Sub-tabs for advanced features
-            settings_tabs = st.tabs(["🧠 Hybrid Pipeline", "🔄 Pipeline", "📡 Live", "📊 Databento", "📋 Tasks", "🖥️ Servers", "🚀 Deploy", "🔧 Dev Tools", "⚙️ Config"])
+            settings_tabs = st.tabs(["🧠 Hybrid Pipeline", "🔄 Pipeline", "📡 Live", "📊 Databento", "📋 Tasks", "🖥️ Servers", "🚀 Deploy", "🔧 Dev Tools", "🔗 SFTP", "🔄 Sync", "🖥️ Node Config", "⚙️ Config", "🔐 SSH Connect"])
             
             with settings_tabs[0]:
                 render_hybrid_pipeline_interface()
@@ -4603,16 +4758,38 @@ def main():
                     server_deployment_tab()
             
             with settings_tabs[6]:
-                render_syncthing_ray_interface()
-
+                # Ray tab
+                try:
+                    from quanttime.dashboard.ray_interface import ray_interface
+                    ray_interface()
+                except ImportError as e:
+                    st.error(f"Ray interface not available: {e}")
+                    st.info("Please ensure ray_interface.py is in place")
+            
             with settings_tabs[7]:
-                render_sftp_interface()
-
+                st.info("Dev Tools interface")
+            
             with settings_tabs[8]:
-                render_node_deployment_interface()
-
+                render_sftp_interface()
+            
             with settings_tabs[9]:
+                from quanttime.dashboard.sync_interface import render_sync_interface
+                render_sync_interface()
+            
+            with settings_tabs[10]:
+                try:
+                    from quanttime.dashboard.node_config import render_node_configuration_interface
+                    render_node_configuration_interface()
+                except ImportError:
+                    st.error("Node configuration module not available")
+                    st.info("Please ensure the node_config.py file exists")
+            
+            with settings_tabs[11]:
                 render_configuration_settings()
+            
+            with settings_tabs[12]:
+                from quanttime.dashboard.ssh_connection import render_ssh_connection_interface
+                render_ssh_connection_interface()
     
     else:
         # Server dashboard - server-specific capabilities

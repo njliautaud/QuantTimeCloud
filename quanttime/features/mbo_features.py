@@ -14,6 +14,18 @@ import logging
 from collections import deque
 import warnings
 
+# Import orderflow classification module
+from quanttime.features.orderflow_classification import (
+    OrderFlowClassifier, 
+    add_orderflow_classification_features
+)
+
+# Import microstructure features module
+from quanttime.features.microstructure_features import (
+    add_microstructure_features,
+    MicrostructureAnalyzer
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,6 +55,8 @@ class FeatureConfig:
     include_microstructure: bool = True
     include_rolling_features: bool = True
     include_cross_features: bool = True
+    include_orderflow_classification: bool = True  # New: Toxic vs Benign flow classification
+    include_ultra_microstructure: bool = True      # New: Ultra-HF features for price prediction
     
     # Target horizons (in minutes)
     target_horizons: List[int] = field(default_factory=lambda: [1, 3, 5])
@@ -527,6 +541,16 @@ def _process_small_dataset(mbo_df: pd.DataFrame, engineer: MBOFeatureEngineer, c
             logger.info("Adding cross features...")
             combined_df = engineer.get_cross_features(combined_df)
         
+        # Add orderflow classification features
+        if config.include_orderflow_classification:
+            logger.info("Adding orderflow classification features...")
+            combined_df = add_orderflow_classification_features(combined_df)
+        
+        # Add ultra-microstructure features (for price prediction)
+        if config.include_ultra_microstructure:
+            logger.info("Adding ultra-microstructure features...")
+            combined_df = add_microstructure_features(combined_df)
+        
         # Create target variables
         logger.info("Creating target variables...")
         combined_df = engineer.create_target_variables(combined_df)
@@ -581,6 +605,16 @@ def _process_large_dataset(mbo_df: pd.DataFrame, engineer: MBOFeatureEngineer, c
         if config.include_cross_features:
             logger.info("Adding cross features to large dataset...")
             combined_df = _add_cross_features_chunked(combined_df, engineer)
+        
+        # Add orderflow classification features
+        if config.include_orderflow_classification:
+            logger.info("Adding orderflow classification features to large dataset...")
+            combined_df = add_orderflow_classification_features(combined_df)
+        
+        # Add ultra-microstructure features (for price prediction)
+        if config.include_ultra_microstructure:
+            logger.info("Adding ultra-microstructure features to large dataset...")
+            combined_df = add_microstructure_features(combined_df)
         
         # Create target variables
         logger.info("Creating target variables for large dataset...")

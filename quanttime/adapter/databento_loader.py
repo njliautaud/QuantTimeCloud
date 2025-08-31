@@ -28,8 +28,25 @@ logger = logging.getLogger(__name__)
 # Reference: databento-python-main/databento/__init__.py - available components
 from databento import DBNStore
 from databento import Historical
-from databento.common.enums import PriceType
 from databento_dbn import Schema
+
+# Handle PriceType import - it may not be available in all versions
+try:
+    from databento.common.enums import PriceType
+    PRICE_TYPE_AVAILABLE = True
+except ImportError:
+    # Create a fallback enum if PriceType is not available
+    from enum import Enum
+    class PriceType(Enum):
+        BID = "bid"
+        ASK = "ask"
+        TRADE = "trade"
+        OPEN = "open"
+        HIGH = "high"
+        LOW = "low"
+        CLOSE = "close"
+    PRICE_TYPE_AVAILABLE = False
+    logger.warning("PriceType not available in databento version, using fallback enum")
 
 # Import MBO processor for training optimization
 try:

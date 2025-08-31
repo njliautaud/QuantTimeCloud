@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Node Deployment Script
-Command-line tool for deploying QuantTime to all nodes
+Cross-Platform Node Deployment Script
+Command-line tool for deploying QuantTime to Windows and Linux nodes using Ray+SSH
 """
 
 import argparse
@@ -15,7 +15,7 @@ import time
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from quanttime.dashboard.node_deployment import NodeDeploymentManager, NodeHealthStatus
+from quanttime.core.cross_platform_node_manager import CrossPlatformNodeManager, NodeHealthStatus
 
 def run_command(command, cwd=None, check=True):
     """Run a shell command"""
@@ -80,59 +80,66 @@ def check_git_status():
 
 def deploy_all_nodes():
     """Deploy to all configured nodes"""
-    print("🚀 Starting deployment to all nodes...")
+    print("🚀 Starting cross-platform deployment to all nodes...")
     
-    # Initialize deployment manager
-    manager = NodeDeploymentManager()
+    # Initialize node manager
+    manager = CrossPlatformNodeManager()
     
-    if not manager.nodes:
-        print("❌ No nodes configured. Please run the configuration wizard first.")
+    cluster_overview = manager.get_cluster_overview()
+    if cluster_overview["total_nodes"] <= 1:  # Only head node
+        print("❌ No worker nodes configured. Please configure nodes first.")
         return False
     
-    print(f"📋 Found {len(manager.nodes)} nodes: {', '.join(manager.nodes.keys())}")
+    print(f"📋 Found {cluster_overview['total_nodes']} nodes ({cluster_overview['platform_counts']})")
     
-    # Deploy to each node
-    for node_name, node_config in manager.nodes.items():
-        if node_name == "laptop":
-            print(f"⏭️  Skipping laptop node")
-            continue
-        
-        print(f"\n📦 Deploying to {node_name} ({node_config['host']})...")
-        
-        success, message = manager.deploy_to_node(node_name)
+    # Deploy to all nodes
+    deploy_results = manager.deploy_to_all_nodes(force=True)
+    
+    # Show results
+    all_success = True
+    for node_id, (success, message) in deploy_results.items():
         if success:
-            print(f"✅ {node_name}: {message}")
+            print(f"✅ {node_id}: {message}")
         else:
-            print(f"❌ {node_name}: {message}")
-            return False
+            print(f"❌ {node_id}: {message}")
+            all_success = False
     
-    print("\n🎉 Deployment completed successfully!")
-    return True
+    if all_success:
+        print("\n🎉 Cross-platform deployment completed successfully!")
+    else:
+        print("\n⚠️ Some deployments failed. Check the logs above.")
+    
+    return all_success
 
 def check_health():
     """Check health of all nodes"""
-    print("🏥 Checking node health...")
+    print("🏥 Checking cross-platform node health...")
     
-    manager = NodeDeploymentManager()
+    manager = CrossPlatformNodeManager()
     
-    if not manager.nodes:
+    cluster_overview = manager.get_cluster_overview()
+    if cluster_overview["total_nodes"] == 0:
         print("❌ No nodes configured")
         return False
     
+    print(f"📊 Cluster Overview: {cluster_overview['total_nodes']} nodes")
+    print(f"🟢 Healthy: {cluster_overview['health_counts']['green']}")
+    print(f"🟡 Issues: {cluster_overview['health_counts']['yellow']}")
+    print(f"🔴 Offline: {cluster_overview['health_counts']['red']}")
+    print(f"💻 Platforms: {cluster_overview['platform_counts']}")
+    
     all_healthy = True
     
-    for node_name, node_config in manager.nodes.items():
-        print(f"\n🔍 Checking {node_name} ({node_config['host']})...")
+    for node_id, node_info in cluster_overview["nodes"].items():
+        print(f"\n🔍 Checking {node_id} ({node_info['name']})...")
         
-        status, message = manager.get_node_health_status(node_name)
-        
-        if status == NodeHealthStatus.GREEN:
-            print(f"🟢 {node_name}: {message}")
-        elif status == NodeHealthStatus.YELLOW:
-            print(f"🟡 {node_name}: {message}")
+        if node_info["health_status"] == "green":
+            print(f"🟢 {node_id}: {node_info['health_message']} ({node_info['platform']})")
+        elif node_info["health_status"] == "yellow":
+            print(f"🟡 {node_id}: {node_info['health_message']} ({node_info['platform']})")
             all_healthy = False
         else:
-            print(f"🔴 {node_name}: {message}")
+            print(f"🔴 {node_id}: {node_info['health_message']} ({node_info['platform']})")
             all_healthy = False
     
     if all_healthy:
@@ -144,52 +151,67 @@ def check_health():
 
 def start_ray_clusters():
     """Start Ray clusters on all nodes"""
-    print("⚡ Starting Ray clusters...")
+    print("⚡ Starting Ray workers on all nodes...")
     
-    manager = NodeDeploymentManager()
+    manager = CrossPlatformNodeManager()
     
-    if not manager.nodes:
-        print("❌ No nodes configured")
+    cluster_overview = manager.get_cluster_overview()
+    worker_nodes = [node_id for node_id, node_info in cluster_overview["nodes"].items() 
+                    if node_id != manager.config["head_node"]["node_id"]]
+    
+    if not worker_nodes:
+        print("❌ No worker nodes configured")
         return False
     
-    for node_name, node_config in manager.nodes.items():
-        print(f"\n🚀 Starting Ray on {node_name}...")
+    all_success = True
+    for node_id in worker_nodes:
+        print(f"\n🚀 Starting Ray worker on {node_id}...")
         
-        success, message = manager.start_ray_cluster(node_name)
+        success, message = manager.start_ray_cluster(node_id)
         if success:
-            print(f"✅ {node_name}: {message}")
+            print(f"✅ {node_id}: {message}")
         else:
-            print(f"❌ {node_name}: {message}")
-            return False
+            print(f"❌ {node_id}: {message}")
+            all_success = False
     
-    print("\n🎉 Ray clusters started successfully!")
-    return True
+    if all_success:
+        print("\n🎉 Ray workers started successfully!")
+    else:
+        print("\n⚠️ Some Ray workers failed to start")
+    
+    return all_success
 
 def sync_files():
     """Sync large files to all nodes"""
-    print("🔄 Syncing large files...")
+    print("🔄 Syncing large files via SFTP...")
     
-    manager = NodeDeploymentManager()
+    manager = CrossPlatformNodeManager()
     
-    if not manager.nodes:
-        print("❌ No nodes configured")
+    cluster_overview = manager.get_cluster_overview()
+    worker_nodes = [node_id for node_id, node_info in cluster_overview["nodes"].items() 
+                    if node_id != manager.config["head_node"]["node_id"]]
+    
+    if not worker_nodes:
+        print("❌ No worker nodes configured")
         return False
     
-    for node_name, node_config in manager.nodes.items():
-        if node_name == "laptop":
-            continue
+    all_success = True
+    for node_id in worker_nodes:
+        print(f"\n📁 Syncing large files to {node_id}...")
         
-        print(f"\n📁 Syncing files to {node_name}...")
-        
-        success, message = manager.sync_large_files(node_name)
+        success, message = manager.sync_large_files(node_id)
         if success:
-            print(f"✅ {node_name}: {message}")
+            print(f"✅ {node_id}: {message}")
         else:
-            print(f"❌ {node_name}: {message}")
-            return False
+            print(f"❌ {node_id}: {message}")
+            all_success = False
     
-    print("\n🎉 File sync completed!")
-    return True
+    if all_success:
+        print("\n🎉 SFTP file sync completed!")
+    else:
+        print("\n⚠️ Some file syncs failed")
+    
+    return all_success
 
 def full_deployment():
     """Perform full deployment: check Git, deploy, start Ray, sync files"""

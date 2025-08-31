@@ -630,11 +630,9 @@ class ServerControlCenter:
         """Render server status grid"""
         st.markdown("## 🖥️ Server Status")
         
-        cols = st.columns(len(self.servers))
-        
-        for i, (server_id, server_info) in enumerate(self.servers.items()):
-            with cols[i]:
-                self._render_server_card(server_id, server_info)
+        # Render server cards without nested columns
+        for server_id, server_info in self.servers.items():
+            self._render_server_card(server_id, server_info)
     
     def _render_server_card(self, server_id: str, server_info: Dict[str, Any]):
         """Render individual server status card"""
@@ -665,14 +663,19 @@ class ServerControlCenter:
         </div>
         """, unsafe_allow_html=True)
         
-        # Server actions
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📊 Monitor", key=f"monitor_{server_id}"):
-                self._open_server_monitor(server_id)
+        # Server actions - use horizontal layout instead of columns
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        with col2:
-            if st.button("⚙️ Manage", key=f"manage_{server_id}"):
+        # Create a container for buttons
+        button_container = st.container()
+        with button_container:
+            # Use st.button with custom styling for horizontal layout
+            if st.button("📊 Monitor", key=f"monitor_{server_id}", use_container_width=False):
+                self._open_server_monitor(server_id)
+            
+            st.write(" ")  # Small spacer
+            
+            if st.button("⚙️ Manage", key=f"manage_{server_id}", use_container_width=False):
                 self._open_server_management(server_id)
     
     def _render_performance_charts(self):

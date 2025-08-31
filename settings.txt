@@ -47,3 +47,12 @@ R630XL_SSH_PASSWORD=REDACTED_SSH_PASSWORD
 R630XL_SSH_USER=quanttime
 R630XL_TAILSCALE_IP=jupiter
 
+# SSH Automation Keys (Passphrase-free for automated Git sync)
+SSH_AUTOMATION_PUBLIC_KEY=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIByp1qwwWxZThpsMdRbZQaH5E8/yLq4cesISd9D91qaD quanttime-automation@system
+SSH_AUTOMATION_PRIVATE_KEY_PATH=C:\Users\user\.ssh\quanttime_automation
+
+# Git Configuration  
+GIT_SSH_KEY_PATH=C:\Users\user\.ssh\quanttime_automation
+GIT_AUTO_SYNC_ENABLED=true
+GIT_MONITOR_INTERVAL_SECONDS=30
+

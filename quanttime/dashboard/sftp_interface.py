@@ -58,14 +58,17 @@ def render_sync_status_tab(sftp_manager):
     st.markdown("### Node Status")
     
     node_data = []
-    for node_id, node_info in status["nodes"].items():
-        node_data.append({
-            "Node ID": node_id,
-            "Name": node_info["name"],
-            "Status": node_info["status"],
-            "Last Sync": node_info["last_sync"] or "Never",
-            "Errors": len(node_info["sync_errors"])
-        })
+    
+    # Check if nodes key exists in status
+    if "nodes" in status and status["nodes"]:
+        for node_id, node_info in status["nodes"].items():
+            node_data.append({
+                "Node ID": node_id,
+                "Name": node_info.get("name", "Unknown"),
+                "Status": node_info.get("status", "Unknown"),
+                "Last Sync": node_info.get("last_sync") or "Never",
+                "Errors": len(node_info.get("sync_errors", []))
+            })
     
     if node_data:
         df_nodes = pd.DataFrame(node_data)
@@ -77,16 +80,19 @@ def render_sync_status_tab(sftp_manager):
     st.markdown("### Active Sync Tasks")
     
     task_data = []
-    for task_id, task_info in status["tasks"].items():
-        if task_info["status"] in ["pending", "running"]:
-            task_data.append({
-                "Task ID": task_id,
-                "Source": task_info["source_node"],
-                "Target": task_info["target_node"],
-                "Status": task_info["status"],
-                "Progress": f"{task_info['progress']:.1f}%",
-                "Created": task_info["created_at"]
-            })
+    
+    # Check if tasks key exists in status
+    if "tasks" in status and status["tasks"]:
+        for task_id, task_info in status["tasks"].items():
+            if task_info.get("status") in ["pending", "running"]:
+                task_data.append({
+                    "Task ID": task_id,
+                    "Source": task_info.get("source_node", "Unknown"),
+                    "Target": task_info.get("target_node", "Unknown"),
+                    "Status": task_info.get("status", "Unknown"),
+                    "Progress": f"{task_info.get('progress', 0):.1f}%",
+                    "Created": task_info.get("created_at", "Unknown")
+                })
     
     if task_data:
         df_tasks = pd.DataFrame(task_data)
@@ -98,15 +104,18 @@ def render_sync_status_tab(sftp_manager):
     st.markdown("### Sync Discrepancies")
     
     discrepancy_data = []
-    for node_id, discrepancies in status["discrepancies"].items():
-        for discrepancy in discrepancies:
-            discrepancy_data.append({
-                "Node": node_id,
-                "Type": discrepancy["type"],
-                "File": discrepancy["file_path"],
-                "Source": discrepancy["source_node"],
-                "Target": discrepancy["target_node"]
-            })
+    
+    # Check if discrepancies key exists in status
+    if "discrepancies" in status and status["discrepancies"]:
+        for node_id, discrepancies in status["discrepancies"].items():
+            for discrepancy in discrepancies:
+                discrepancy_data.append({
+                    "Node": node_id,
+                    "Type": discrepancy.get("type", "Unknown"),
+                    "File": discrepancy.get("file_path", "Unknown"),
+                    "Source": discrepancy.get("source_node", "Unknown"),
+                    "Target": discrepancy.get("target_node", "Unknown")
+                })
     
     if discrepancy_data:
         df_discrepancies = pd.DataFrame(discrepancy_data)
@@ -280,35 +289,35 @@ def render_analytics_tab(sftp_manager):
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        total_nodes = len(status["nodes"])
+        total_nodes = len(status.get("nodes", {}))
         st.metric("Total Nodes", total_nodes)
     
     with col2:
-        online_nodes = sum(1 for node in status["nodes"].values() if node["status"] == "online")
+        online_nodes = sum(1 for node in status.get("nodes", {}).values() if node.get("status") == "online")
         st.metric("Online Nodes", online_nodes)
     
     with col3:
-        active_tasks = sum(1 for task in status["tasks"].values() if task["status"] in ["pending", "running"])
+        active_tasks = sum(1 for task in status.get("tasks", {}).values() if task.get("status") in ["pending", "running"])
         st.metric("Active Tasks", active_tasks)
     
     with col4:
-        total_discrepancies = sum(len(discrepancies) for discrepancies in status["discrepancies"].values())
+        total_discrepancies = sum(len(discrepancies) for discrepancies in status.get("discrepancies", {}).values())
         st.metric("Discrepancies", total_discrepancies)
     
     # Task history
     st.markdown("### Recent Sync Tasks")
     
     task_history = []
-    for task_id, task_info in status["tasks"].items():
+    for task_id, task_info in status.get("tasks", {}).items():
         task_history.append({
             "Task ID": task_id,
-            "Source": task_info["source_node"],
-            "Target": task_info["target_node"],
-            "Status": task_info["status"],
-            "Progress": f"{task_info['progress']:.1f}%",
-            "Created": task_info["created_at"],
-            "Completed": task_info["completed_at"] or "In Progress",
-            "Errors": len(task_info["errors"])
+            "Source": task_info.get("source_node", "Unknown"),
+            "Target": task_info.get("target_node", "Unknown"),
+            "Status": task_info.get("status", "Unknown"),
+            "Progress": f"{task_info.get('progress', 0):.1f}%",
+            "Created": task_info.get("created_at", "Unknown"),
+            "Completed": task_info.get("completed_at") or "In Progress",
+            "Errors": len(task_info.get("errors", []))
         })
     
     if task_history:
@@ -322,12 +331,12 @@ def render_analytics_tab(sftp_manager):
     st.markdown("### Node Health")
     
     health_data = []
-    for node_id, node_info in status["nodes"].items():
+    for node_id, node_info in status.get("nodes", {}).items():
         health_data.append({
             "Node": node_id,
-            "Status": node_info["status"],
-            "Last Sync": node_info["last_sync"] or "Never",
-            "Error Count": len(node_info["sync_errors"])
+            "Status": node_info.get("status", "Unknown"),
+            "Last Sync": node_info.get("last_sync") or "Never",
+            "Error Count": len(node_info.get("sync_errors", []))
         })
     
     if health_data:
@@ -343,10 +352,10 @@ def render_analytics_tab(sftp_manager):
                 "timestamp": datetime.now().isoformat(),
                 "status": status,
                 "summary": {
-                    "total_nodes": len(status["nodes"]),
-                    "online_nodes": sum(1 for node in status["nodes"].values() if node["status"] == "online"),
-                    "active_tasks": sum(1 for task in status["tasks"].values() if task["status"] in ["pending", "running"]),
-                    "total_discrepancies": sum(len(discrepancies) for discrepancies in status["discrepancies"].values())
+                    "total_nodes": len(status.get("nodes", {})),
+                    "online_nodes": sum(1 for node in status.get("nodes", {}).values() if node.get("status") == "online"),
+                    "active_tasks": sum(1 for task in status.get("tasks", {}).values() if task.get("status") in ["pending", "running"]),
+                    "total_discrepancies": sum(len(discrepancies) for discrepancies in status.get("discrepancies", {}).values())
                 }
             }
             

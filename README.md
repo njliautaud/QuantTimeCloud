@@ -15,20 +15,128 @@ A comprehensive quantitative trading platform built around **Databento MBO (Mark
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.11+
 - Databento account with MBO data access
 - Local Databento MBO data files (`.dbn.zst` format)
-- Ray distributed computing cluster (optional for distributed processing)
+- Cross-platform Ray cluster (Windows + Linux nodes supported)
+- SSH access to remote nodes
 
-### Installation
+### One-Click Startup (Recommended)
+Simply run:
+```bash
+python run.py
+```
+
+This will automatically:
+- ✅ Start Ray cluster head node
+- ✅ Initialize AI-powered smart automation
+- ✅ Auto-discover and configure network nodes
+- ✅ Setup intelligent SSH key management
+- ✅ Initialize cross-platform Git monitoring
+- ✅ Setup SFTP file synchronization
+- ✅ Launch the integrated dashboard with smart automation
+- ✅ Monitor repository for auto-deployment
+- ✅ Enable predictive health monitoring
+- ✅ Start self-healing system management
+
+### Smart Setup (Zero Configuration)
+For completely automated setup with intelligent detection:
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd QuantTime
 
-# Start the dashboard (configuration wizard will appear automatically)
-python run.py
+# Run smart setup (automatically detects everything)
+python scripts/smart_setup.py
 ```
+This will automatically:
+- 🔍 Detect your system configuration
+- 📦 Install all dependencies
+- 🔑 Generate SSH keys for automation
+- 🌐 Discover network nodes via Tailscale
+- ⚙️ Generate intelligent configurations
+- 🚀 Initialize and start QuantTime
+- ✅ Verify all systems are working
+
+### Manual Setup
+```bash
+# Clone the repository
+git clone <repository-url>
+cd QuantTime
+
+# Install dependencies
+python run.py install
+
+# Start with full integration
+python run.py up
+```
+
+### Cross-Platform Node Setup
+
+QuantTime now supports **Windows and Linux nodes** seamlessly:
+
+#### Windows Node Setup
+```powershell
+# Clone repository on Windows node
+git clone <repository-url> C:\QuantTime
+cd C:\QuantTime
+
+# Install Python dependencies
+python -m pip install -r requirements.txt
+
+# Configure SSH server (if needed)
+# Enable OpenSSH Server in Windows Features
+```
+
+#### Linux Node Setup  
+```bash
+# Clone repository on Linux node
+git clone <repository-url> /opt/quanttime
+cd /opt/quanttime
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Ensure SSH server is running
+sudo systemctl enable ssh
+sudo systemctl start ssh
+```
+
+### Automated Deployment
+The system automatically:
+- ✅ Monitors GitHub repository for changes
+- ✅ Deploys code to all connected nodes
+- ✅ Synchronizes large files via SFTP
+- ✅ Manages Ray worker connections
+- ✅ Provides cross-platform compatibility
+
+### Environment Activation Commands
+After installation, you can activate the virtual environment manually:
+
+**Windows:**
+```cmd
+.venv\Scripts\activate
+```
+
+**Linux/Mac:**
+```bash
+source .venv/bin/activate
+```
+
+**Deactivate environment:**
+```bash
+deactivate
+```
+
+### Available Scripts
+- `setup_quanttime.py` - Complete setup with environment activation and launch
+- `setup_server.py` - Ubuntu server setup (Tailscale, SSH, QuantTime environment)
+- `run.py` - Main application entry point
+- Additional scripts available in `scripts/` folder
 
 ### Configuration
 1. **Follow the setup wizard** that appears when you first run `python run.py`:
@@ -47,6 +155,16 @@ DATABENTO_KEY=your_api_key_here
 4. The dashboard will be available at `http://localhost:8501`
 
 ## 📊 Features
+
+### Smart Automation (NEW)
+- **🤖 AI-Powered Node Management**: Intelligent discovery, configuration, and deployment
+- **🔍 Zero-Touch Setup**: Automatic system detection and configuration generation
+- **🔑 Smart Credential Management**: Automatic SSH key generation and credential detection
+- **🌐 Network Auto-Discovery**: Scan and configure Tailscale nodes automatically
+- **📊 Predictive Health Monitoring**: AI-powered trend analysis and failure prediction
+- **🔧 Self-Healing Systems**: Automatic issue detection and resolution
+- **⚡ Intelligent Resource Allocation**: Dynamic optimization based on workload patterns
+- **🚀 Zero-Touch Deployment**: Fully automated QuantTime installation on discovered nodes
 
 ### Data Pipeline
 - **MBO Level 3 Data Processing**: Full pipeline for Databento `.dbn.zst` files
@@ -81,13 +199,16 @@ DATABENTO_KEY=your_api_key_here
 - **Order Flow Analysis**: Footprint charts and DOM visualization
 - **Live Trading**: Paper and live trading capabilities with RL engine
 
-### Distributed Computing
-- **Ray Cluster Management**: Submit jobs to multiple servers via dashboard
-- **Distributed Training**: Train models across multiple nodes
+### Cross-Platform Distributed Computing
+- **Ray Cluster Management**: Submit jobs to Windows and Linux nodes via dashboard
+- **Cross-Platform Deployment**: Automatic deployment to mixed OS environments
+- **Distributed Training**: Train models across Windows GPU and Linux CPU nodes
 - **Distributed Backtesting**: Run backtests on high-performance servers
 - **Job Queue Management**: Monitor and manage distributed jobs
 - **Resource Monitoring**: Real-time cluster resource utilization
-- **Node Deployment**: Automatic deployment and health monitoring
+- **SSH-Based Management**: Secure cross-platform node communication
+- **SFTP File Synchronization**: Automatic large file sync between nodes
+- **Git Auto-Deployment**: Repository monitoring with automatic updates
 - **Color-Coded Health Status**: Red (cannot connect), Yellow (issues), Green (operational)
 
 ## 🏗️ Architecture
@@ -168,35 +289,49 @@ RAY_HEAD_NODE=localhost:10001
 RAY_WORKER_NODES=r630xl:6379,r810:6379
 ```
 
-### Ray Cluster Configuration (`config/ray_cluster_config.json`)
+### Cross-Platform Ray Cluster Configuration (`config/ray_cluster_config.json`)
 ```json
 {
   "head_node": {
     "node_id": "laptop",
-    "name": "Development Laptop",
+    "name": "Development Laptop (Windows)",
     "address": "localhost",
     "port": 10001,
-    "dashboard_port": 8265,
-    "is_head": true
+    "platform": "windows",
+    "paths": {
+      "project_root": "C:\\Users\\user\\Documents\\GitHub\\QuantTime",
+      "python_executable": "python"
+    }
   },
   "worker_nodes": [
     {
-      "node_id": "r630xl",
-      "name": "R630XL Server (Jupiter)",
-      "address": "jupiter",
-      "port": 6379,
-      "dashboard_port": 8265,
-      "is_head": false
+      "node_id": "windows_gpu",
+      "name": "Windows GPU Node (NVIDIA)",
+      "address": "windows-gpu-node",
+      "platform": "windows",
+      "resources": {"CPU": 16, "GPU": 1, "memory": 32.0},
+      "paths": {
+        "project_root": "C:\\QuantTime",
+        "python_executable": "python"
+      }
     },
     {
-      "node_id": "r810",
-      "name": "R810 Server",
-      "address": "saturn",
-      "port": 6379,
-      "dashboard_port": 8265,
-      "is_head": false
+      "node_id": "r630xl",
+      "name": "R630XL Server (Ubuntu)",
+      "address": "jupiter",
+      "platform": "linux",
+      "resources": {"CPU": 16, "GPU": 0, "memory": 64.0},
+      "paths": {
+        "project_root": "/opt/quanttime",
+        "python_executable": "/opt/quanttime/.venv/bin/python"
+      }
     }
-  ]
+  ],
+  "git_config": {
+    "repository_url": "https://github.com/njliautaud/QuantTime.git",
+    "auto_pull_enabled": true,
+    "monitor_interval_seconds": 30
+  }
 }
 ```
 
@@ -234,30 +369,40 @@ data/es_futures/mbo/
 - **Resource Management**: Cluster resource utilization
 - **Results Collection**: Automatic result synchronization
 
-## 🚀 Deployment
+## 🚀 Cross-Platform Deployment
 
-### Dashboard Deployment
-1. **Run the dashboard**: `python run.py`
-2. **Follow the configuration wizard** for initial setup
-3. **Go to Settings → "🚀 Deploy"** for node management
+### Automated Deployment
+The system provides seamless cross-platform deployment:
 
-### Command-Line Deployment
+1. **Start QuantTime**: `python run.py`
+2. **Configure nodes** via dashboard Settings
+3. **Enable auto-deployment** for hands-free operation
+
+### Manual Deployment Commands
 ```bash
-# Full deployment (recommended)
+# Full cross-platform deployment
 python scripts/deploy_nodes.py full
 
 # Individual commands
-python scripts/deploy_nodes.py git-check    # Check Git status
-python scripts/deploy_nodes.py deploy       # Deploy to all nodes
-python scripts/deploy_nodes.py health       # Check node health
-python scripts/deploy_nodes.py ray          # Start Ray clusters
-python scripts/deploy_nodes.py sync         # Sync large files
+python scripts/deploy_nodes.py git-check    # Check Git repository status
+python scripts/deploy_nodes.py deploy       # Deploy to Windows + Linux nodes
+python scripts/deploy_nodes.py health       # Check all node health
+python scripts/deploy_nodes.py ray          # Start Ray workers
+python scripts/deploy_nodes.py sync         # SFTP sync large files
 ```
 
+### Cross-Platform Features
+- **🔄 Git Auto-Sync**: Monitors repository for changes
+- **📡 SSH Management**: Secure connections to all nodes
+- **📁 SFTP Sync**: Large file synchronization
+- **⚡ Ray Integration**: Distributed job execution
+- **🖥️ Windows Support**: Native Windows node management
+- **🐧 Linux Support**: Ubuntu/Debian server management
+
 ### Node Health Monitoring
-- **🟢 Green**: All systems operational
-- **🟡 Yellow**: Connected but issues (missing dependencies, version mismatch)
-- **🔴 Red**: Cannot connect to node
+- **🟢 Green**: All systems operational (Git synced, Ray connected)
+- **🟡 Yellow**: Connected but issues (outdated code, Ray disconnected)
+- **🔴 Red**: Cannot connect to node (SSH/network issues)
 
 ## 🧪 Testing
 
@@ -287,6 +432,44 @@ This tests:
 3. Make your changes
 4. Add tests for new functionality
 5. Submit a pull request
+
+## 📁 Clean Directory Structure
+
+The root directory has been cleaned to show only essential files:
+
+```
+QuantTime/
+├── run.py                    # Main application entry point
+├── setup_quanttime.py        # Complete setup script
+├── requirements.txt          # Python dependencies
+├── pyproject.toml           # Project configuration
+├── settings.txt             # Application settings
+├── README.md                # This file
+├── .gitignore               # Git ignore rules
+├── .gitattributes           # Git attributes
+├── quanttime/               # Main application package
+├── data/                    # Data directory
+├── config/                  # Configuration files
+├── models/                  # Trained models
+├── backtests/               # Backtest results
+├── logs/                    # Application logs
+├── cache/                   # Cache files
+├── temp/                    # Temporary files
+├── shared/                  # Shared resources
+├── server/                  # Server components
+├── tools/                   # Utility tools
+├── docs/                    # Documentation (moved from root)
+├── scripts/                 # Setup and utility scripts (moved from root)
+└── external/                # External libraries (moved from root)
+```
+
+### Moved Files
+- **Documentation**: All `.md` files moved to `docs/`
+- **Setup Scripts**: Additional setup scripts moved to `scripts/`
+- **External Libraries**: `databento-python-main/` and `lightweight-charts-master/` moved to `external/`
+- **Docker Files**: `docker-compose.yml` and `Dockerfile` moved to `scripts/`
+
+This keeps the root directory clean and focused on the essential files you need to run the application.
 
 ## 📄 License
 

@@ -476,12 +476,44 @@ class TradingEnvironment(gym.Env):
 
 
 class RLTradeEngine:
-    """Reinforcement Learning Trade Engine"""
+    """
+    Reinforcement Learning Trade Engine with Real-Time Latency Awareness
+    
+    This is where latency analysis, alpha decay, and competitive timing belongs!
+    The RL engine makes real-time trading decisions based on:
+    - Model predictions (from prediction models)
+    - Current latency situation
+    - Alpha decay calculations  
+    - Competitive analysis
+    - Real-time PnL tracking
+    """
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.model = None
         self.env = None
+        
+        # Real-time latency tracking
+        self.our_latency_ms = config.get('our_latency_ms', 2.0)
+        self.databento_latency_ms = config.get('databento_latency_ms', 0.5) 
+        self.alpha_half_life_ms = config.get('alpha_half_life_ms', 100.0)
+        
+        # Real-time state tracking
+        self.current_position = {'side': 'flat', 'size': 0, 'entry_price': 0.0, 'entry_time': None}
+        self.pnl_ticks = 0.0
+        self.pnl_dollars = 0.0
+        self.trade_history = []
+        
+        # Tick-based configuration (ES futures)
+        self.tick_size = config.get('tick_size', 0.25)
+        self.tick_value = config.get('tick_value', 12.50)  # $12.50 per tick for ES
+        
+        # Performance tracking
+        self.total_trades = 0
+        self.winning_trades = 0
+        self.total_pnl_ticks = 0.0
+        
+        logger.info(f"RL Trade Engine initialized with {self.our_latency_ms}ms latency awareness")
         
     def create_environment(self, data: pd.DataFrame, predictions: Dict[str, np.ndarray]) -> TradingEnvironment:
         """Create trading environment"""
@@ -536,6 +568,314 @@ class RLTradeEngine:
     def load_model(self, path: str):
         """Load trained model"""
         self.model = PPO.load(path)
+    
+    def calculate_alpha_remaining(self, prediction_time: float, current_time: float) -> float:
+        """
+        Calculate remaining alpha based on time elapsed and our latency
+        
+        Args:
+            prediction_time: When the prediction was made (timestamp)
+            current_time: Current time (timestamp)
+            
+        Returns:
+            Alpha remaining as percentage (0-100)
+        """
+        # Calculate total elapsed time since prediction
+        elapsed_ms = (current_time - prediction_time) * 1000  # Convert to ms
+        
+        # Add our processing latency
+        total_latency_ms = elapsed_ms + self.our_latency_ms + self.databento_latency_ms
+        
+        # Calculate alpha decay (exponential)
+        alpha_remaining = np.exp(-total_latency_ms / self.alpha_half_life_ms)
+        
+        return alpha_remaining * 100  # Return as percentage
+    
+    def should_trade_decision(self, 
+                             predictions: Dict[str, float], 
+                             current_price: float,
+                             prediction_time: float,
+                             current_time: float) -> Dict[str, Any]:
+        """
+        Real-time trading decision with latency awareness
+        
+        Args:
+            predictions: Model predictions {'direction': float, 'confidence': float, ...}
+            current_price: Current market price
+            prediction_time: When prediction was made
+            current_time: Current time
+            
+        Returns:
+            Trading decision with reasoning
+        """
+        # Calculate alpha remaining
+        alpha_remaining = self.calculate_alpha_remaining(prediction_time, current_time)
+        
+        # Calculate competitive window (time left before alpha decays significantly)
+        elapsed_ms = (current_time - prediction_time) * 1000
+        total_latency_ms = elapsed_ms + self.our_latency_ms + self.databento_latency_ms
+        competitive_window_ms = max(0, self.alpha_half_life_ms - total_latency_ms)
+        
+        decision = {
+            'should_trade': False,
+            'action': 'hold',
+            'size': 0,
+            'confidence': 0.0,
+            'alpha_remaining': alpha_remaining,
+            'competitive_window_ms': competitive_window_ms,
+            'reasoning': []
+        }
+        
+        # Check if we have a position
+        if self.current_position['side'] != 'flat':
+            decision['reasoning'].append("Already have position")
+            return decision
+        
+        # Alpha decay check - don't trade if too little alpha remains
+        if alpha_remaining < 30:  # Less than 30% alpha remaining
+            decision['reasoning'].append(f"Alpha decayed to {alpha_remaining:.1f}%")
+            return decision
+        
+        # Competitive window check
+        if competitive_window_ms < 10:  # Less than 10ms left
+            decision['reasoning'].append(f"Competitive window too small: {competitive_window_ms:.1f}ms")
+            return decision
+        
+        # Check prediction confidence
+        prediction_confidence = predictions.get('confidence', 0.0)
+        if prediction_confidence < 0.6:
+            decision['reasoning'].append(f"Prediction confidence too low: {prediction_confidence:.2f}")
+            return decision
+        
+        # Check direction strength
+        direction = predictions.get('direction', 0.0)
+        if abs(direction) < 0.3:
+            decision['reasoning'].append(f"Direction signal too weak: {direction:.2f}")
+            return decision
+        
+        # Decision to trade
+        decision['should_trade'] = True
+        decision['action'] = 'buy' if direction > 0 else 'sell'
+        decision['size'] = 1  # Always 1 contract
+        decision['confidence'] = prediction_confidence * (alpha_remaining / 100)  # Adjust for alpha decay
+        decision['reasoning'].append(f"Trade approved: {alpha_remaining:.1f}% alpha remaining")
+        
+        return decision
+    
+    def execute_trade(self, 
+                     decision: Dict[str, Any], 
+                     current_price: float, 
+                     timestamp: float) -> Dict[str, Any]:
+        """
+        Execute trade and update position with tick-based PnL tracking
+        
+        Args:
+            decision: Trading decision from should_trade_decision()
+            current_price: Current market price
+            timestamp: Current timestamp
+            
+        Returns:
+            Trade execution details
+        """
+        if not decision['should_trade']:
+            return {'executed': False, 'reason': 'No trade decision'}
+        
+        # Execute the trade
+        self.current_position = {
+            'side': decision['action'],
+            'size': decision['size'],
+            'entry_price': current_price,
+            'entry_time': timestamp
+        }
+        
+        # Reset PnL for new position
+        self.pnl_ticks = 0.0
+        self.pnl_dollars = 0.0
+        
+        # Record trade
+        trade_record = {
+            'timestamp': timestamp,
+            'action': decision['action'],
+            'size': decision['size'],
+            'price': current_price,
+            'confidence': decision['confidence'],
+            'alpha_remaining': decision['alpha_remaining'],
+            'competitive_window_ms': decision['competitive_window_ms']
+        }
+        
+        self.trade_history.append(trade_record)
+        self.total_trades += 1
+        
+        logger.info(f"RL Trade executed: {decision['action']} {decision['size']} at {current_price:.2f}, "
+                   f"Alpha: {decision['alpha_remaining']:.1f}%")
+        
+        return {
+            'executed': True,
+            'trade': trade_record,
+            'position': self.current_position.copy()
+        }
+    
+    def update_position_pnl(self, current_price: float) -> Dict[str, Any]:
+        """
+        Update position PnL with tick-based calculations
+        
+        Args:
+            current_price: Current market price
+            
+        Returns:
+            Updated position info with PnL
+        """
+        if self.current_position['side'] == 'flat':
+            return {'has_position': False}
+        
+        entry_price = self.current_position['entry_price']
+        side = self.current_position['side']
+        
+        # Calculate price difference
+        if side == 'buy':
+            price_diff = current_price - entry_price
+        else:  # sell
+            price_diff = entry_price - current_price
+        
+        # Convert to ticks and dollars
+        self.pnl_ticks = price_diff / self.tick_size
+        self.pnl_dollars = self.pnl_ticks * self.tick_value
+        
+        return {
+            'has_position': True,
+            'side': side,
+            'size': self.current_position['size'],
+            'entry_price': entry_price,
+            'current_price': current_price,
+            'unrealized_pnl_ticks': self.pnl_ticks,
+            'unrealized_pnl_dollars': self.pnl_dollars,
+            'price_diff': price_diff
+        }
+    
+    def should_exit_position(self, 
+                           current_price: float, 
+                           timestamp: float,
+                           stop_loss_ticks: float = 10.0,
+                           take_profit_ticks: float = 20.0) -> Dict[str, Any]:
+        """
+        Determine if position should be exited
+        
+        Args:
+            current_price: Current market price
+            timestamp: Current timestamp
+            stop_loss_ticks: Stop loss in ticks
+            take_profit_ticks: Take profit in ticks
+            
+        Returns:
+            Exit decision
+        """
+        if self.current_position['side'] == 'flat':
+            return {'should_exit': False, 'reason': 'No position'}
+        
+        # Update PnL
+        position_info = self.update_position_pnl(current_price)
+        unrealized_pnl_ticks = position_info['unrealized_pnl_ticks']
+        
+        # Check stop loss
+        if unrealized_pnl_ticks <= -stop_loss_ticks:
+            return {
+                'should_exit': True,
+                'reason': 'stop_loss',
+                'pnl_ticks': unrealized_pnl_ticks,
+                'pnl_dollars': position_info['unrealized_pnl_dollars']
+            }
+        
+        # Check take profit
+        if unrealized_pnl_ticks >= take_profit_ticks:
+            return {
+                'should_exit': True,
+                'reason': 'take_profit',
+                'pnl_ticks': unrealized_pnl_ticks,
+                'pnl_dollars': position_info['unrealized_pnl_dollars']
+            }
+        
+        # Check time-based exit (if position held too long)
+        time_held_ms = (timestamp - self.current_position['entry_time']) * 1000
+        max_hold_time_ms = self.config.get('max_hold_time_ms', 60000)  # 1 minute default
+        
+        if time_held_ms > max_hold_time_ms:
+            return {
+                'should_exit': True,
+                'reason': 'time_limit',
+                'pnl_ticks': unrealized_pnl_ticks,
+                'pnl_dollars': position_info['unrealized_pnl_dollars'],
+                'time_held_ms': time_held_ms
+            }
+        
+        return {'should_exit': False, 'reason': 'hold_position'}
+    
+    def close_position(self, current_price: float, timestamp: float, reason: str) -> Dict[str, Any]:
+        """
+        Close current position and update performance metrics
+        
+        Args:
+            current_price: Exit price
+            timestamp: Exit timestamp
+            reason: Reason for exit
+            
+        Returns:
+            Closed position details
+        """
+        if self.current_position['side'] == 'flat':
+            return {'closed': False, 'reason': 'No position to close'}
+        
+        # Final PnL calculation
+        position_info = self.update_position_pnl(current_price)
+        realized_pnl_ticks = position_info['unrealized_pnl_ticks']
+        realized_pnl_dollars = position_info['unrealized_pnl_dollars']
+        
+        # Record closed position
+        closed_position = {
+            'timestamp': timestamp,
+            'action': 'close',
+            'side': self.current_position['side'],
+            'size': self.current_position['size'],
+            'entry_price': self.current_position['entry_price'],
+            'exit_price': current_price,
+            'realized_pnl_ticks': realized_pnl_ticks,
+            'realized_pnl_dollars': realized_pnl_dollars,
+            'exit_reason': reason,
+            'time_held_ms': (timestamp - self.current_position['entry_time']) * 1000
+        }
+        
+        # Update performance metrics
+        self.total_pnl_ticks += realized_pnl_ticks
+        if realized_pnl_ticks > 0:
+            self.winning_trades += 1
+        
+        # Reset position
+        self.current_position = {'side': 'flat', 'size': 0, 'entry_price': 0.0, 'entry_time': None}
+        self.pnl_ticks = 0.0
+        self.pnl_dollars = 0.0
+        
+        logger.info(f"Position closed: {reason}, PnL: {realized_pnl_ticks:.1f} ticks (${realized_pnl_dollars:.2f})")
+        
+        return {
+            'closed': True,
+            'position': closed_position,
+            'total_pnl_ticks': self.total_pnl_ticks,
+            'win_rate': self.winning_trades / self.total_trades if self.total_trades > 0 else 0.0
+        }
+    
+    def get_real_time_metrics(self) -> Dict[str, Any]:
+        """Get real-time performance metrics"""
+        return {
+            'total_trades': self.total_trades,
+            'winning_trades': self.winning_trades,
+            'win_rate': self.winning_trades / self.total_trades if self.total_trades > 0 else 0.0,
+            'total_pnl_ticks': self.total_pnl_ticks,
+            'total_pnl_dollars': self.total_pnl_ticks * self.tick_value,
+            'current_position': self.current_position.copy(),
+            'unrealized_pnl_ticks': self.pnl_ticks,
+            'unrealized_pnl_dollars': self.pnl_dollars,
+            'our_latency_ms': self.our_latency_ms,
+            'alpha_half_life_ms': self.alpha_half_life_ms
+        }
 
 
 class HybridPredictionPipeline:

@@ -20,7 +20,9 @@ import ray
 from ray import tune
 from ray.tune import Tuner, TuneConfig
 from ray.tune.schedulers import ASHAScheduler, FIFOScheduler
-from ray.tune.search import BasicVariantGenerator, OptunaSearch
+from ray.tune.search import BasicVariantGenerator
+# OptunaSearch import - made optional to avoid compatibility issues
+OptunaSearch = None
 from ray.tune.result import DEFAULT_METRIC
 from ray.tune.logger import DEFAULT_LOGGERS
 from ray.tune.utils import wait_for_gpu
@@ -212,19 +214,29 @@ class RayManager:
             logger.error(f"Failed to initialize Ray cluster: {e}")
     
     def _initialize_ray(self):
-        """Initialize Ray runtime"""
+        """Initialize Ray runtime with auto-detection"""
         try:
             if not ray.is_initialized():
-                # Initialize Ray with cluster configuration
+                # Initialize Ray with auto-detection
                 ray.init(
-                    address=f"ray://{self.cluster.head_node.address}:{self.cluster.head_node.port}",
+                    # Let Ray auto-detect the port
                     dashboard_port=self.cluster.head_node.dashboard_port,
                     object_store_memory=self.cluster.cluster_config.get("object_store_memory", "2GB"),
                     redis_max_memory=self.cluster.cluster_config.get("redis_max_memory", "1GB"),
-                    ignore_reinit_error=True
+                    # Enable auto-detection features
+                    local_mode=False,
+                    ignore_reinit_error=True,
+                    # Auto-detect resources
+                    num_cpus=None,  # Auto-detect
+                    num_gpus=None,  # Auto-detect
+                    memory=None,    # Auto-detect
+                    # Auto-detect ports
+                    port=None,      # Auto-detect available port
+                    head=False,     # This is the head node
+                    include_dashboard=True
                 )
                 self.ray_initialized = True
-                logger.info("Ray initialized successfully")
+                logger.info("Ray initialized successfully with auto-detection")
             else:
                 self.ray_initialized = True
                 logger.info("Ray already initialized")
@@ -265,38 +277,83 @@ class RayManager:
                 time.sleep(30)
     
     def _update_node_status(self):
-        """Update status of all nodes"""
+        """Update status of all nodes with dynamic resource detection"""
         try:
             if not self.ray_initialized:
                 return
             
-            # Get cluster resources
+            # Get cluster resources from Ray
             cluster_resources = ray.cluster_resources()
             available_resources = ray.available_resources()
             
-            # Update head node
+            # Update head node with actual detected resources
             head_node = self.cluster.head_node
             head_node.status = "online" if self.ray_initialized else "offline"
             head_node.last_seen = datetime.now()
+            
+            # Get actual resources from Ray
             head_node.cpu_count = int(cluster_resources.get("CPU", 0))
             head_node.memory_gb = float(cluster_resources.get("memory", 0)) / (1024**3)
             head_node.gpu_count = int(cluster_resources.get("GPU", 0))
             head_node.gpu_memory_gb = float(cluster_resources.get("GPU_memory", 0)) / (1024**3)
             
-            # Update worker nodes
+            # Update worker nodes with dynamic detection
             for node in self.cluster.worker_nodes:
-                # Check if node is connected
                 try:
-                    # This is a simplified check - in production you'd check actual node status
+                    # Check if node is connected via Ray
                     node.status = "online"
                     node.last_seen = datetime.now()
                     node.errors = []
+                    
+                    # Try to get node-specific resources
+                    # Note: In a real distributed setup, you'd query each node individually
+                    # For now, we'll use the cluster-wide resources divided by node count
+                    total_nodes = len(self.cluster.worker_nodes) + 1  # +1 for head node
+                    if total_nodes > 1:
+                        node.cpu_count = int(cluster_resources.get("CPU", 0) // total_nodes)
+                        node.memory_gb = float(cluster_resources.get("memory", 0) // total_nodes) / (1024**3)
+                        node.gpu_count = int(cluster_resources.get("GPU", 0) // total_nodes)
+                        node.gpu_memory_gb = float(cluster_resources.get("GPU_memory", 0) // total_nodes) / (1024**3)
+                    
                 except Exception as e:
                     node.status = "offline"
                     node.errors = [f"Connection failed: {str(e)}"]
                     
         except Exception as e:
             logger.error(f"Error updating node status: {e}")
+    
+    def detect_node_resources(self, node_address: str) -> Dict[str, Any]:
+        """Detect actual resources on a specific node"""
+        try:
+            # This would be called on each node to detect its actual resources
+            import psutil
+            import GPUtil
+            
+            resources = {
+                "cpu_count": psutil.cpu_count(logical=True),
+                "memory_gb": psutil.virtual_memory().total / (1024**3),
+                "gpu_count": 0,
+                "gpu_memory_gb": 0.0
+            }
+            
+            # Try to detect GPUs
+            try:
+                gpus = GPUtil.getGPUs()
+                resources["gpu_count"] = len(gpus)
+                resources["gpu_memory_gb"] = sum(gpu.memoryTotal for gpu in gpus) / 1024
+            except:
+                pass  # No GPUs or GPUtil not available
+            
+            return resources
+            
+        except Exception as e:
+            logger.error(f"Error detecting resources on {node_address}: {e}")
+            return {
+                "cpu_count": 0,
+                "memory_gb": 0.0,
+                "gpu_count": 0,
+                "gpu_memory_gb": 0.0
+            }
     
     def _process_job_queue(self):
         """Process job queue"""

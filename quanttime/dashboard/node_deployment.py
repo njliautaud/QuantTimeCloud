@@ -2,6 +2,7 @@
 """
 Node Deployment and Health Monitoring System
 Handles automatic deployment, synchronization, and health checks for all nodes
+with proper environment isolation
 """
 
 import streamlit as st
@@ -10,6 +11,8 @@ import subprocess
 import paramiko
 import time
 import threading
+import os
+import platform
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import yaml
@@ -20,14 +23,193 @@ class NodeHealthStatus:
     YELLOW = "yellow"  # Connected but issues (version mismatch, missing deps)
     GREEN = "green"    # Fully operational
 
+class EnvironmentIsolationManager:
+    """Manages environment isolation between nodes"""
+    
+    def __init__(self):
+        self.local_platform = platform.system().lower()
+        self.local_arch = platform.machine()
+    
+    def get_node_environment_config(self, node_name: str, node_config: Dict) -> Dict:
+        """Generate node-specific environment configuration"""
+        node_platform = node_config.get("platform", "linux")  # Default to linux for servers
+        node_arch = node_config.get("arch", "x86_64")
+        
+        # Base environment config
+        env_config = {
+            "node_name": node_name,
+            "platform": node_platform,
+            "arch": node_arch,
+            "python_version": "3.11",  # Default, can be overridden
+            "project_path": "/opt/quanttime",  # Server path
+            "data_path": "/opt/quanttime/data",
+            "logs_path": "/opt/quanttime/logs",
+            "cache_path": "/opt/quanttime/cache",
+            "temp_path": "/opt/quanttime/temp",
+            "venv_path": "/opt/quanttime/.venv",
+            "ray_temp_dir": "/tmp/ray",
+            "ray_log_dir": "/opt/quanttime/logs/ray",
+        }
+        
+        # Platform-specific adjustments
+        if node_platform == "windows":
+            env_config.update({
+                "project_path": "C:\\Users\\user\\Documents\\GitHub\\QuantTime",
+                "data_path": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\data",
+                "logs_path": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\logs",
+                "cache_path": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\cache",
+                "temp_path": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\temp",
+                "venv_path": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\.venv",
+                "ray_temp_dir": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\temp\\ray",
+                "ray_log_dir": "C:\\Users\\user\\Documents\\GitHub\\QuantTime\\logs\\ray",
+            })
+        
+        return env_config
+    
+    def create_node_environment_script(self, node_name: str, env_config: Dict) -> str:
+        """Create a node-specific environment setup script"""
+        platform = env_config["platform"]
+        
+        if platform == "windows":
+            return self._create_windows_env_script(node_name, env_config)
+        else:
+            return self._create_linux_env_script(node_name, env_config)
+    
+    def _create_linux_env_script(self, node_name: str, env_config: Dict) -> str:
+        """Create Linux environment setup script"""
+        script = f"""#!/bin/bash
+# Node-specific environment setup for {node_name}
+# Generated automatically - DO NOT EDIT MANUALLY
+
+export NODE_NAME="{node_name}"
+export PLATFORM="{env_config['platform']}"
+export ARCH="{env_config['arch']}"
+export PYTHON_VERSION="{env_config['python_version']}"
+
+# Project paths
+export QUANTTIME_ROOT="{env_config['project_path']}"
+export QUANTTIME_DATA="{env_config['data_path']}"
+export QUANTTIME_LOGS="{env_config['logs_path']}"
+export QUANTTIME_CACHE="{env_config['cache_path']}"
+export QUANTTIME_TEMP="{env_config['temp_path']}"
+export QUANTTIME_VENV="{env_config['venv_path']}"
+
+# Ray configuration
+export RAY_TEMP_DIR="{env_config['ray_temp_dir']}"
+export RAY_LOG_DIR="{env_config['ray_log_dir']}"
+
+# Create directories
+mkdir -p "$QUANTTIME_DATA" "$QUANTTIME_LOGS" "$QUANTTIME_CACHE" "$QUANTTIME_TEMP" "$RAY_TEMP_DIR" "$RAY_LOG_DIR"
+
+# Set permissions
+chmod 755 "$QUANTTIME_DATA" "$QUANTTIME_LOGS" "$QUANTTIME_CACHE" "$QUANTTIME_TEMP"
+
+# Python path
+export PYTHONPATH="$QUANTTIME_ROOT:$PYTHONPATH"
+
+# Activate virtual environment
+if [ -f "$QUANTTIME_VENV/bin/activate" ]; then
+    source "$QUANTTIME_VENV/bin/activate"
+fi
+
+echo "Environment setup complete for {node_name}"
+"""
+        return script
+    
+    def _create_windows_env_script(self, node_name: str, env_config: Dict) -> str:
+        """Create Windows environment setup script"""
+        script = f"""@echo off
+REM Node-specific environment setup for {node_name}
+REM Generated automatically - DO NOT EDIT MANUALLY
+
+set NODE_NAME={node_name}
+set PLATFORM={env_config['platform']}
+set ARCH={env_config['arch']}
+set PYTHON_VERSION={env_config['python_version']}
+
+REM Project paths
+set QUANTTIME_ROOT={env_config['project_path']}
+set QUANTTIME_DATA={env_config['data_path']}
+set QUANTTIME_LOGS={env_config['logs_path']}
+set QUANTTIME_CACHE={env_config['cache_path']}
+set QUANTTIME_TEMP={env_config['temp_path']}
+set QUANTTIME_VENV={env_config['venv_path']}
+
+REM Ray configuration
+set RAY_TEMP_DIR={env_config['ray_temp_dir']}
+set RAY_LOG_DIR={env_config['ray_log_dir']}
+
+REM Create directories
+if not exist "%QUANTTIME_DATA%" mkdir "%QUANTTIME_DATA%"
+if not exist "%QUANTTIME_LOGS%" mkdir "%QUANTTIME_LOGS%"
+if not exist "%QUANTTIME_CACHE%" mkdir "%QUANTTIME_CACHE%"
+if not exist "%QUANTTIME_TEMP%" mkdir "%QUANTTIME_TEMP%"
+if not exist "%RAY_TEMP_DIR%" mkdir "%RAY_TEMP_DIR%"
+if not exist "%RAY_LOG_DIR%" mkdir "%RAY_LOG_DIR%"
+
+REM Python path
+set PYTHONPATH=%QUANTTIME_ROOT%;%PYTHONPATH%
+
+REM Activate virtual environment
+if exist "%QUANTTIME_VENV%\\Scripts\\activate.bat" (
+    call "%QUANTTIME_VENV%\\Scripts\\activate.bat"
+)
+
+echo Environment setup complete for {node_name}
+"""
+        return script
+    
+    def create_node_config_file(self, node_name: str, env_config: Dict) -> str:
+        """Create a node-specific configuration file"""
+        config = {
+            "node": {
+                "name": node_name,
+                "platform": env_config["platform"],
+                "arch": env_config["arch"],
+                "python_version": env_config["python_version"]
+            },
+            "paths": {
+                "project_root": env_config["project_path"],
+                "data": env_config["data_path"],
+                "logs": env_config["logs_path"],
+                "cache": env_config["cache_path"],
+                "temp": env_config["temp_path"],
+                "venv": env_config["venv_path"]
+            },
+            "ray": {
+                "temp_dir": env_config["ray_temp_dir"],
+                "log_dir": env_config["ray_log_dir"],
+                "dashboard_port": 8265,
+                "head_port": 10001
+            },
+            "environment": {
+                "isolated": True,
+                "auto_setup": True,
+                "sync_exclusions": [
+                    ".env",
+                    ".env.local",
+                    "config/local_*",
+                    "logs/*",
+                    "cache/*",
+                    "temp/*",
+                    ".venv/*",
+                    "__pycache__/*",
+                    "*.pyc"
+                ]
+            }
+        }
+        
+        return json.dumps(config, indent=2)
+
 class NodeDeploymentManager:
-    """Manages deployment and health monitoring of all nodes"""
+    """Manages deployment and health monitoring of all nodes with environment isolation"""
     
     def __init__(self):
         self.config_file = Path("config/sftp_config.json")
         self.ray_config_file = Path("config/ray_config.json")
         self.nodes = {}
         self.health_status = {}
+        self.env_manager = EnvironmentIsolationManager()
         self.load_config()
     
     def load_config(self):
@@ -72,19 +254,23 @@ class NodeDeploymentManager:
             return False, "Cannot connect"
         
         try:
+            # Get node environment config
+            env_config = self.env_manager.get_node_environment_config(node_name, self.nodes[node_name])
+            project_path = env_config["project_path"]
+            
             # Check if repo exists
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && git status", timeout=10)
+            stdin, stdout, stderr = ssh.exec_command(f"cd {project_path} && git status", timeout=10)
             if stdout.channel.recv_exit_status() != 0:
                 return False, "Repository not found"
             
             # Check for uncommitted changes
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && git status --porcelain", timeout=10)
+            stdin, stdout, stderr = ssh.exec_command(f"cd {project_path} && git status --porcelain", timeout=10)
             uncommitted = stdout.read().decode().strip()
             if uncommitted:
                 return False, f"Uncommitted changes: {len(uncommitted.splitlines())} files"
             
             # Check if up to date with remote
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && git fetch origin && git status -uno", timeout=10)
+            stdin, stdout, stderr = ssh.exec_command(f"cd {project_path} && git fetch origin && git status -uno", timeout=10)
             status = stdout.read().decode()
             if "behind" in status:
                 return False, "Behind remote"
@@ -103,8 +289,13 @@ class NodeDeploymentManager:
             return False, "Cannot connect"
         
         try:
+            # Get node environment config
+            env_config = self.env_manager.get_node_environment_config(node_name, self.nodes[node_name])
+            project_path = env_config["project_path"]
+            venv_path = env_config["venv_path"]
+            
             # Check if virtual environment exists
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && ls -la .venv", timeout=10)
+            stdin, stdout, stderr = ssh.exec_command(f"cd {project_path} && ls -la {venv_path}", timeout=10)
             if stdout.channel.recv_exit_status() != 0:
                 return False, "Virtual environment missing"
             
@@ -113,7 +304,12 @@ class NodeDeploymentManager:
             missing_deps = []
             
             for dep in dependencies:
-                stdin, stdout, stderr = ssh.exec_command(f"cd /opt/quanttime && .venv/bin/python -c 'import {dep}'", timeout=10)
+                if env_config["platform"] == "windows":
+                    cmd = f"cd {project_path} && {venv_path}\\Scripts\\python.exe -c 'import {dep}'"
+                else:
+                    cmd = f"cd {project_path} && {venv_path}/bin/python -c 'import {dep}'"
+                
+                stdin, stdout, stderr = ssh.exec_command(cmd, timeout=10)
                 if stdout.channel.recv_exit_status() != 0:
                     missing_deps.append(dep)
             
@@ -134,13 +330,28 @@ class NodeDeploymentManager:
             return False, "Cannot connect"
         
         try:
+            # Get node environment config
+            env_config = self.env_manager.get_node_environment_config(node_name, self.nodes[node_name])
+            project_path = env_config["project_path"]
+            venv_path = env_config["venv_path"]
+            
             # Check if Ray is installed
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && .venv/bin/python -c 'import ray'", timeout=10)
+            if env_config["platform"] == "windows":
+                cmd = f"cd {project_path} && {venv_path}\\Scripts\\python.exe -c 'import ray'"
+            else:
+                cmd = f"cd {project_path} && {venv_path}/bin/python -c 'import ray'"
+            
+            stdin, stdout, stderr = ssh.exec_command(cmd, timeout=10)
             if stdout.channel.recv_exit_status() != 0:
                 return False, "Ray not installed"
             
             # Check if Ray cluster is running
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && .venv/bin/python -c 'import ray; print(ray.is_initialized())'", timeout=10)
+            if env_config["platform"] == "windows":
+                cmd = f"cd {project_path} && {venv_path}\\Scripts\\python.exe -c 'import ray; print(ray.is_initialized())'"
+            else:
+                cmd = f"cd {project_path} && {venv_path}/bin/python -c 'import ray; print(ray.is_initialized())'"
+            
+            stdin, stdout, stderr = ssh.exec_command(cmd, timeout=10)
             if stdout.channel.recv_exit_status() != 0:
                 return False, "Ray not initialized"
             
@@ -179,49 +390,48 @@ class NodeDeploymentManager:
         return NodeHealthStatus.GREEN, "All systems operational"
     
     def deploy_to_node(self, node_name: str) -> Tuple[bool, str]:
-        """Deploy the project to a node"""
+        """Deploy the project to a node with environment isolation"""
         ssh = self.get_ssh_connection(node_name)
         if not ssh:
             return False, "Cannot connect to node"
         
         try:
+            # Get node environment config
+            env_config = self.env_manager.get_node_environment_config(node_name, self.nodes[node_name])
+            project_path = env_config["project_path"]
+            
             # Create directory if it doesn't exist
-            stdin, stdout, stderr = ssh.exec_command("sudo mkdir -p /opt/quanttime", timeout=10)
-            stdin, stdout, stderr = ssh.exec_command("sudo chown jupiter:jupiter /opt/quanttime", timeout=10)
+            stdin, stdout, stderr = ssh.exec_command(f"sudo mkdir -p {project_path}", timeout=10)
+            stdin, stdout, stderr = ssh.exec_command(f"sudo chown {self.nodes[node_name]['username']}:{self.nodes[node_name]['username']} {project_path}", timeout=10)
             
             # Check if repository exists
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && ls -la", timeout=10)
+            stdin, stdout, stderr = ssh.exec_command(f"cd {project_path} && ls -la", timeout=10)
             repo_exists = ".git" in stdout.read().decode()
             
             if not repo_exists:
                 # Clone repository
                 git_url = "https://github.com/njliautaud/QuantTimeCloud.git"
-                stdin, stdout, stderr = ssh.exec_command(f"cd /opt && git clone {git_url} quanttime", timeout=60)
+                stdin, stdout, stderr = ssh.exec_command(f"cd {project_path}/.. && git clone {git_url} quanttime", timeout=60)
                 if stdout.channel.recv_exit_status() != 0:
                     return False, "Failed to clone repository"
             else:
                 # Pull latest changes
-                stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && git pull origin master", timeout=30)
+                stdin, stdout, stderr = ssh.exec_command(f"cd {project_path} && git pull origin master", timeout=30)
                 if stdout.channel.recv_exit_status() != 0:
                     return False, "Failed to pull latest changes"
             
-            # Create virtual environment
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && python3 -m venv .venv", timeout=30)
-            if stdout.channel.recv_exit_status() != 0:
-                return False, "Failed to create virtual environment"
+            # Run the setup script on the node
+            if env_config["platform"] == "windows":
+                setup_cmd = f"cd {project_path} && python scripts/setup_node.py --node-name {node_name}"
+            else:
+                setup_cmd = f"cd {project_path} && python3 scripts/setup_node.py --node-name {node_name}"
             
-            # Install dependencies
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && .venv/bin/pip install --upgrade pip", timeout=30)
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && .venv/bin/pip install -r requirements.txt", timeout=120)
+            stdin, stdout, stderr = ssh.exec_command(setup_cmd, timeout=300)  # 5 minutes timeout
             if stdout.channel.recv_exit_status() != 0:
-                return False, "Failed to install dependencies"
+                stderr_output = stderr.read().decode()
+                return False, f"Setup script failed: {stderr_output}"
             
-            # Install project in editable mode
-            stdin, stdout, stderr = ssh.exec_command("cd /opt/quanttime && .venv/bin/pip install -e .", timeout=30)
-            if stdout.channel.recv_exit_status() != 0:
-                return False, "Failed to install project"
-            
-            return True, "Deployment successful"
+            return True, "Deployment successful - node setup completed"
             
         except Exception as e:
             return False, f"Deployment error: {str(e)}"
@@ -229,25 +439,38 @@ class NodeDeploymentManager:
             ssh.close()
     
     def start_ray_cluster(self, node_name: str) -> Tuple[bool, str]:
-        """Start Ray cluster on a node"""
+        """Start Ray cluster on a node using the launcher script"""
         ssh = self.get_ssh_connection(node_name)
         if not ssh:
             return False, "Cannot connect to node"
         
         try:
-            # Start Ray head node
-            if node_name == "laptop":
-                # Start head node
-                cmd = "cd /opt/quanttime && .venv/bin/ray start --head --port=10001 --dashboard-port=8265"
+            # Get node environment config
+            env_config = self.env_manager.get_node_environment_config(node_name, self.nodes[node_name])
+            project_path = env_config["project_path"]
+            
+            # Determine if this is the head node
+            is_head = node_name == "laptop"
+            
+            # Run the launcher script on the node
+            if env_config["platform"] == "windows":
+                launch_cmd = f"cd {project_path} && python scripts/launch_node.py --node-name {node_name}"
+                if is_head:
+                    launch_cmd += " --head"
             else:
-                # Start worker node
-                cmd = "cd /opt/quanttime && .venv/bin/ray start --address=razer:10001"
+                launch_cmd = f"cd {project_path} && python3 scripts/launch_node.py --node-name {node_name}"
+                if is_head:
+                    launch_cmd += " --head"
             
-            stdin, stdout, stderr = ssh.exec_command(cmd, timeout=30)
+            # Start the launcher in the background
+            stdin, stdout, stderr = ssh.exec_command(f"nohup {launch_cmd} > logs/launch.log 2>&1 &", timeout=30)
             if stdout.channel.recv_exit_status() != 0:
-                return False, "Failed to start Ray cluster"
+                return False, "Failed to start launcher script"
             
-            return True, "Ray cluster started"
+            # Wait a moment for Ray to start
+            time.sleep(10)
+            
+            return True, "Ray cluster launcher started"
             
         except Exception as e:
             return False, f"Ray start error: {str(e)}"
@@ -255,7 +478,7 @@ class NodeDeploymentManager:
             ssh.close()
     
     def sync_large_files(self, node_name: str) -> Tuple[bool, str]:
-        """Sync large files to node using SFTP"""
+        """Sync large files to node using SFTP with environment isolation"""
         # This will use the existing SFTP manager
         try:
             from quanttime.core.sftp_manager import get_sftp_manager

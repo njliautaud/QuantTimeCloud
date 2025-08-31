@@ -1,0 +1,105 @@
+{
+  "nodes": {
+    "laptop": {
+      "name": "Development Laptop (Windows)",
+      "host": "localhost",
+      "username": "user",
+      "port": 22,
+      "password": null,
+      "key_path": null,
+      "platform": "windows",
+      "large_file_dirs": [
+        "data/es_futures",
+        "data/processed",
+        "models",
+        "backtest/results",
+        "logs"
+      ]
+    },
+    "windows_gpu": {
+      "name": "Windows GPU Node (NVIDIA)",
+      "host": "windows-gpu-node",
+      "username": "quanttime",
+      "port": 22,
+      "password": null,
+      "key_path": null,
+      "platform": "windows",
+      "large_file_dirs": [
+        "C:/QuantTime/data/es_futures",
+        "C:/QuantTime/data/processed",
+        "C:/QuantTime/models",
+        "C:/QuantTime/backtest/results",
+        "C:/QuantTime/logs"
+      ]
+    },
+    "r630xl": {
+      "name": "R630XL Server (Ubuntu)",
+      "host": "jupiter",
+      "username": "jupiter",
+      "port": 22,
+      "password": null,
+      "key_path": null,
+      "platform": "linux",
+      "large_file_dirs": [
+        "/opt/quanttime/data/es_futures",
+        "/opt/quanttime/data/processed",
+        "/opt/quanttime/models",
+        "/opt/quanttime/backtest/results",
+        "/opt/quanttime/logs"
+      ]
+    },
+    "r810": {
+      "name": "R810 Server (Ubuntu)",
+      "host": "saturn",
+      "username": "jupiter",
+      "port": 22,
+      "password": null,
+      "key_path": null,
+      "platform": "linux",
+      "large_file_dirs": [
+        "/opt/quanttime/data/es_futures",
+        "/opt/quanttime/data/processed",
+        "/opt/quanttime/models",
+        "/opt/quanttime/backtest/results",
+        "/opt/quanttime/logs"
+      ]
+    }
+  },
+  "sync_settings": {
+    "max_file_size_mb": 100,
+    "sync_interval_minutes": 5,
+    "retry_attempts": 3,
+    "chunk_size_mb": 10,
+    "parallel_transfers": 4,
+    "cross_platform": true,
+    "windows_path_separator": "\\",
+    "linux_path_separator": "/"
+  },
+  "large_file_dirs": [
+    "data/es_futures",
+    "data/processed",
+    "models",
+    "backtest/results",
+    "logs"
+  ],
+  "sync_patterns": {
+    "include": [
+      "*.parquet",
+      "*.pkl",
+      "*.joblib",
+      "*.h5",
+      "*.csv",
+      "*.json",
+      "*.log"
+    ],
+    "exclude": [
+      "*.pyc",
+      "__pycache__",
+      ".git",
+      ".venv",
+      "node_modules",
+      "temp/*",
+      "*.tmp"
+    ]
+  }
+}
