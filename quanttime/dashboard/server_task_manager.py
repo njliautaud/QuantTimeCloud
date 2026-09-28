@@ -4,6 +4,7 @@ Server Task Manager for QuantTime Dashboard.
 Handles deployment, task execution, and progress synchronization.
 """
 
+import os
 import subprocess
 import json
 import time
@@ -526,9 +527,10 @@ echo "✅ Code updated successfully!"
         try:
             print(f"[LOCAL] Starting sync from {server_name} ({ip_address}) to local ./data/...")
             # Use rsync with password authentication
-            rsync_cmd = f'rsync -avz -e "sshpass -p REDACTED_SSH_PASSWORD ssh -o StrictHostKeyChecking=no" {username}@{ip_address}:/opt/quanttime/data/ ./data/'
+            rsync_cmd = f'rsync -avz -e "sshpass -e ssh -o StrictHostKeyChecking=no" {username}@{ip_address}:/opt/quanttime/data/ ./data/'
             print(f"[LOCAL] Executing: {rsync_cmd}")
-            result = subprocess.run(rsync_cmd, shell=True, capture_output=True, text=True)
+            ssh_env = {**os.environ, "SSHPASS": os.environ.get("R630XL_SSH_PASSWORD", "")}
+            result = subprocess.run(rsync_cmd, shell=True, capture_output=True, text=True, env=ssh_env)
             
             if result.returncode == 0:
                 st.success(f"✅ Synced data from {server_name}")

@@ -88,7 +88,7 @@ python run.py train | backtest | live
 
 The first time the dashboard opens, it shows a setup wizard to configure the Git remote, nodes, Ray and SFTP.
 
-- Put your own Databento key in `settings.txt` as `DATABENTO_KEY`.
+- Copy `settings.example.txt` to `settings.txt` (git-ignored) and export `DATABENTO_KEY` with your own key (see `.env.example`). Secrets are read from environment variables, never from committed files.
 - Node addresses and credentials are entered in the wizard; do not commit them.
 - Start the monitoring stack with `docker compose -f docker-compose.monitoring.yml up`.
 

@@ -113,7 +113,7 @@ p.process_raw_to_normalized('20250824', 'execution_aware_light_v1',
 ### **File Synchronization**
 ```bash
 # Sync from server to laptop
-rsync -avz -e "sshpass -p REDACTED_SSH_PASSWORD ssh -o StrictHostKeyChecking=no" \
+rsync -avz -e "sshpass -p "$R630XL_SSH_PASSWORD" ssh -o StrictHostKeyChecking=no" \
   quanttime@jupiter:/opt/quanttime/data/ ./data/
 ```
 
@@ -204,7 +204,7 @@ ps aux | grep python
 #### **Manual Sync**
 ```bash
 # On laptop
-rsync -avz -e "sshpass -p REDACTED_SSH_PASSWORD ssh -o StrictHostKeyChecking=no" \
+rsync -avz -e "sshpass -p "$R630XL_SSH_PASSWORD" ssh -o StrictHostKeyChecking=no" \
   quanttime@jupiter:/opt/quanttime/data/ ./data/
 ```
 

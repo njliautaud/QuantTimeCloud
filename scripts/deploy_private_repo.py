@@ -219,7 +219,7 @@ def main():
     
     username = settings.get('R630XL_SSH_USER', 'quanttime')
     ip_address = settings.get('R630XL_TAILSCALE_IP', 'jupiter')
-    password = settings.get('R630XL_SSH_PASSWORD')
+    password = os.environ.get('R630XL_SSH_PASSWORD') or settings.get('R630XL_SSH_PASSWORD')
     
     if not password:
         print("❌ R630XL_SSH_PASSWORD not found in settings.txt")

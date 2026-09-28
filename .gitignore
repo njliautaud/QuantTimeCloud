@@ -94,3 +94,9 @@ ray_tmp/
 # Syncthing files (if any remain)
 .stfolder/
 .syncthing/
+
+# Secrets and machine-local settings (copy settings.example.txt -> settings.txt)
+.env
+*.env
+!.env.example
+settings.txt

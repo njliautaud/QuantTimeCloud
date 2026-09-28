@@ -1,5 +1,7 @@
+# Copy this file to settings.txt (git-ignored) and adjust. Secrets come from environment variables (see .env.example).
 # Databento Configuration
-DATABENTO_KEY=REDACTED_DATABENTO_API_KEY
+# Secret: leave blank here and set the DATABENTO_KEY environment variable
+DATABENTO_KEY=
 DATABENTO_DATASET=GLBX.MDP3
 DATABENTO_SYMBOL=ES.FUT
 DATABENTO_SCHEMA=mbo
@@ -43,7 +45,8 @@ CHART_SOURCE=databento
 CHART_LOOKBACK_MINUTES=60
 
 # Server Configuration
-R630XL_SSH_PASSWORD=REDACTED_SSH_PASSWORD
+# Secret: leave blank here and set the R630XL_SSH_PASSWORD environment variable
+R630XL_SSH_PASSWORD=
 R630XL_SSH_USER=quanttime
 R630XL_TAILSCALE_IP=jupiter
 

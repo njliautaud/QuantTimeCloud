@@ -92,7 +92,7 @@ Laptop: laptop (different subnet)
 # Boot Ubuntu 22.04 installer
 # Install with default settings
 # Create user: quanttime
-# Set password: REDACTED_SSH_PASSWORD
+# Set a strong password (export it locally as R630XL_SSH_PASSWORD)
 ```
 
 ### 3.2 Run Automated Setup
@@ -135,7 +135,7 @@ quanttime-health
 # Boot Ubuntu 22.04 installer
 # Install with default settings
 # Create user: quanttime
-# Set password: REDACTED_SSH_PASSWORD
+# Set a strong password (export it locally as R630XL_SSH_PASSWORD)
 ```
 
 ### 4.2 Run Automated Setup

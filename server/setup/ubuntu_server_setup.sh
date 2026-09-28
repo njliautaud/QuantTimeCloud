@@ -156,7 +156,7 @@ print_status "Creating quanttime user..."
 if ! id "quanttime" &>/dev/null; then
     useradd -m -s /bin/bash quanttime
     usermod -aG sudo quanttime
-    echo "quanttime:REDACTED_SSH_PASSWORD" | chpasswd
+    echo "quanttime:${QUANTTIME_USER_PASSWORD:?export QUANTTIME_USER_PASSWORD before running this script}" | chpasswd
     print_success "Created quanttime user"
 else
     print_success "quanttime user already exists"
@@ -214,7 +214,7 @@ systemctl start fail2ban
 print_status "Configuring PostgreSQL..."
 sudo -u postgres createuser --interactive quanttime
 sudo -u postgres createdb quanttime
-sudo -u postgres psql -c "ALTER USER quanttime PASSWORD 'REDACTED_POSTGRES_PASSWORD_QUANTTIME_ALT';"
+sudo -u postgres psql -c "ALTER USER quanttime PASSWORD '${POSTGRES_PASSWORD:?export POSTGRES_PASSWORD before running this script}';"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE quanttime TO quanttime;"
 
 # Configure Redis
@@ -428,7 +428,7 @@ EOF
 cat > /opt/quanttime/.env << EOF
 # QuantTime Server Environment
 SERVER_NAME=$SERVER_NAME
-DATABASE_URL=postgresql://quanttime:REDACTED_POSTGRES_PASSWORD_QUANTTIME_ALT@localhost:5432/quanttime
+DATABASE_URL=postgresql://quanttime:${POSTGRES_PASSWORD}@localhost:5432/quanttime
 REDIS_URL=redis://localhost:6379/0
 LOG_LEVEL=INFO
 ENVIRONMENT=production
@@ -486,7 +486,7 @@ cat > /etc/rsyncd.conf << 'EOF'
 EOF
 
 # Create rsync secrets file
-echo "quanttime:REDACTED_SSH_PASSWORD" > /etc/rsyncd.secrets
+echo "quanttime:${QUANTTIME_USER_PASSWORD}" > /etc/rsyncd.secrets
 chmod 600 /etc/rsyncd.secrets
 
 # Enable and start rsync service

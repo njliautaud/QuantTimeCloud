@@ -158,14 +158,15 @@ EOF
 
 # Set up PostgreSQL
 print_status "Setting up PostgreSQL..."
+: "${POSTGRES_PASSWORD:?export POSTGRES_PASSWORD before running this script}"
 if [ "$OS" = "Ubuntu" ] || [ "$OS" = "Debian GNU/Linux" ]; then
     systemctl start postgresql
     systemctl enable postgresql
     
     # Create database and user
-    sudo -u postgres psql << 'EOF'
+    sudo -u postgres psql << EOF
 CREATE DATABASE quanttime;
-CREATE USER quanttime WITH PASSWORD 'REDACTED_POSTGRES_PASSWORD_QUANTTIME';
+CREATE USER quanttime WITH PASSWORD '${POSTGRES_PASSWORD}';
 GRANT ALL PRIVILEGES ON DATABASE quanttime TO quanttime;
 ALTER USER quanttime CREATEDB;
 EOF
@@ -175,9 +176,9 @@ elif [ "$OS" = "CentOS Linux" ] || [ "$OS" = "Red Hat Enterprise Linux" ]; then
     systemctl enable postgresql
     
     # Create database and user
-    sudo -u postgres psql << 'EOF'
+    sudo -u postgres psql << EOF
 CREATE DATABASE quanttime;
-CREATE USER quanttime WITH PASSWORD 'REDACTED_POSTGRES_PASSWORD_QUANTTIME';
+CREATE USER quanttime WITH PASSWORD '${POSTGRES_PASSWORD}';
 GRANT ALL PRIVILEGES ON DATABASE quanttime TO quanttime;
 ALTER USER quanttime CREATEDB;
 EOF
@@ -216,7 +217,7 @@ EOF
 
 # Set up environment variables
 print_status "Setting up environment variables..."
-cat > /opt/quanttime/.env << 'EOF'
+cat > /opt/quanttime/.env << EOF
 # QuantTime Server Environment Variables
 QUANTTIME_DEPLOYMENT=server
 QUANTTIME_NODE_TYPE=server
@@ -228,7 +229,7 @@ QUANTTIME_TEMP_PATH=temp/server
 QUANTTIME_LOGS_PATH=logs
 
 # Database
-DATABASE_URL=postgresql://quanttime:REDACTED_POSTGRES_PASSWORD_QUANTTIME@localhost/quanttime
+DATABASE_URL=postgresql://quanttime:${POSTGRES_PASSWORD}@localhost/quanttime
 
 # API Keys (set these manually)
 # DATABENTO_API_KEY=your_databento_api_key_here

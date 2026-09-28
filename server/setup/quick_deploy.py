@@ -58,7 +58,7 @@ def get_server_config() -> Dict[str, Any]:
         'gateway': get_user_input("Gateway IP", "192.168.2.1"),
         'tailscale_key': get_user_input("Tailscale auth key", ""),
         'username': get_user_input("SSH username", "quanttime"),
-        'password': get_user_input("SSH password", "REDACTED_SSH_PASSWORD")
+        'password': get_user_input("SSH password", os.environ.get("R630XL_SSH_PASSWORD", ""))
     }
     
     # R810 Configuration
@@ -69,7 +69,7 @@ def get_server_config() -> Dict[str, Any]:
         'gateway': get_user_input("Gateway IP", "192.168.2.1"),
         'tailscale_key': get_user_input("Tailscale auth key", ""),
         'username': get_user_input("SSH username", "quanttime"),
-        'password': get_user_input("SSH password", "REDACTED_SSH_PASSWORD")
+        'password': get_user_input("SSH password", os.environ.get("R630XL_SSH_PASSWORD", ""))
     }
     
     # GitHub Configuration

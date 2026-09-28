@@ -3,6 +3,7 @@
 Monitoring Interface - Embeds Prometheus/Grafana into main dashboard
 """
 
+import os
 import streamlit as st
 import requests
 import json
@@ -20,7 +21,7 @@ class MonitoringInterface:
         self.grafana_url = "http://localhost:3000"
         self.prometheus_url = "http://localhost:9090"
         self.grafana_user = "admin"
-        self.grafana_password = "REDACTED_GRAFANA_ADMIN_PASSWORD"
+        self.grafana_password = os.environ.get("GRAFANA_ADMIN_PASSWORD", "")
         
     def check_monitoring_status(self):
         """Check if monitoring services are running"""

@@ -8,6 +8,7 @@ This provides real-time monitoring, job management, and server control capabilit
 import asyncio
 import json
 import logging
+import os
 import time
 import subprocess
 from datetime import datetime, timedelta
@@ -294,7 +295,7 @@ class ServerControlCenter:
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     
                     try:
-                        ssh.connect(ip, username=username, password="REDACTED_SSH_PASSWORD", timeout=5)
+                        ssh.connect(ip, username=username, password=os.environ.get("R630XL_SSH_PASSWORD", ""), timeout=5)
                     except:
                         # Fallback to key-based authentication
                         ssh.connect(ip, username=username, timeout=5)
