@@ -96,7 +96,6 @@ The first time the dashboard opens, it shows a setup wizard to configure the Git
 
 - **[databento-python](https://github.com/databento/databento-python)**. Official Databento client, Apache-2.0. A copy is vendored in `external/`.
 - **[TradingView Lightweight Charts](https://github.com/tradingview/lightweight-charts)**. Apache-2.0. A copy is vendored in `external/`.
-- **Sierra Chart DTC client code.** Archived under `data/archive/sierra_chart/` from the project's earlier Sierra Chart integration; the code is third-party.
 
 ## Disclaimer
 
